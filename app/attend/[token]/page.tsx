@@ -248,24 +248,21 @@ export default function AttendPage({ params }: { params: Promise<{ token: string
                   placeholder="Ahmet Yılmaz"
                   value={form.name}
                   onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
+                  required
                 />
                 <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                  Kayıtlı iseniz boş bırakabilirsiniz
+                  Katılımcı listesindeki adınızı tam olarak yazın
                 </span>
               </div>
 
               <div className="form-field">
-                <label>E-posta *</label>
+                <label>E-posta</label>
                 <input
                   type="email"
                   placeholder="ahmet@ornek.com"
                   value={form.email}
                   onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
-                  required
                 />
-                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                  Kayıtlı olup olmadığınızı doğrulamak için kullanılır
-                </span>
               </div>
 
               <div className="form-field">

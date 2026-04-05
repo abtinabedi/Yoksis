@@ -51,7 +51,14 @@ export async function DELETE(
   }
 
   const { id } = await params;
-  const { participantId } = await request.json();
-  await db.delete(participants).where(eq(participants.id, participantId));
+  const body = await request.json();
+
+  if (body.clearAll) {
+    await db.delete(participants).where(eq(participants.eventId, id));
+  } else {
+    await db.delete(participants).where(eq(participants.id, body.participantId));
+  }
+
   return NextResponse.json({ success: true });
 }
+

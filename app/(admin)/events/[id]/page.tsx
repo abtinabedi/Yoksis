@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, use } from "react";
 import Link from "next/link";
+import Papa from "papaparse";
 
 interface Event {
   id: string;
@@ -12,6 +13,13 @@ interface Event {
   locationLat: number | null;
   locationLng: number | null;
   locationRadiusM: number | null;
+}
+
+interface Participant {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
 }
 
 interface Attendance {
@@ -45,15 +53,34 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   const [event, setEvent] = useState<Event | null>(null);
   const [qrData, setQrData] = useState<QrData | null>(null);
   const [countdown, setCountdown] = useState(0);
+  const [participants, setParticipants] = useState<Participant[]>([]);
   const [attendances, setAttendances] = useState<Attendance[]>([]);
   const [loading, setLoading] = useState(true);
   const [showQrUrl, setShowQrUrl] = useState(false);
+  const [csvError, setCsvError] = useState("");
+  const [csvLoading, setCsvLoading] = useState(false);
 
   useEffect(() => {
-    fetch(`/api/events/${id}`)
-      .then((r) => r.json())
-      .then((data) => { setEvent(data); setLoading(false); });
+    Promise.all([
+      fetch(`/api/events/${id}`).then((r) => r.json()),
+      fetch(`/api/events/${id}/participants`).then((r) => r.json()),
+      fetch(`/api/events/${id}/attendance`).then((r) => r.json()),
+    ]).then(([ev, parts, atts]) => {
+      setEvent(ev);
+      setParticipants(Array.isArray(parts) ? parts : []);
+      setAttendances(Array.isArray(atts) ? atts : []);
+      setLoading(false);
+    });
   }, [id]);
+
+  // Yoklama real-time yenile (sekmedeyken her 15sn)
+  useEffect(() => {
+    if (tab !== "attendance") return;
+    const interval = setInterval(() => {
+      fetch(`/api/events/${id}/attendance`).then((r) => r.json()).then(setAttendances);
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [tab, id]);
 
   const refreshQr = useCallback(() => {
     fetch(`/api/events/${id}/qr`)
@@ -79,14 +106,6 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     return () => clearInterval(interval);
   }, [tab, refreshQr]);
 
-  useEffect(() => {
-    if (tab === "attendance") {
-      fetch(`/api/events/${id}/attendance`)
-        .then((r) => r.json())
-        .then(setAttendances);
-    }
-  }, [tab, id]);
-
   async function removeAttendance(attendanceId: string) {
     await fetch(`/api/events/${id}/attendance`, {
       method: "DELETE",
@@ -94,6 +113,62 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
       body: JSON.stringify({ attendanceId }),
     });
     setAttendances((prev) => prev.filter((a) => a.id !== attendanceId));
+  }
+
+  function handleCsvImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setCsvError("");
+    setCsvLoading(true);
+
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        const rows = results.data as Record<string, string>[];
+        const items = rows
+          .map((row) => ({
+            name: row["Ad Soyad"] || row["ad soyad"] || row["name"] || row["isim"] || "",
+            email: row["Email"] || row["email"] || null,
+            phone: row["Telefon"] || row["phone"] || null,
+          }))
+          .filter((r) => r.name.trim().length > 0);
+
+        if (items.length === 0) {
+          setCsvError("CSV'de geçerli kayıt bulunamadı. 'Ad Soyad' sütunu zorunludur.");
+          setCsvLoading(false);
+          return;
+        }
+
+        const res = await fetch(`/api/events/${id}/participants`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(items),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setParticipants((prev) => [...prev, ...data]);
+        } else {
+          setCsvError(data.error || "CSV yüklenemedi.");
+        }
+        setCsvLoading(false);
+        e.target.value = "";
+      },
+      error: () => {
+        setCsvError("CSV dosyası okunamadı.");
+        setCsvLoading(false);
+      },
+    });
+  }
+
+  async function clearParticipants() {
+    if (!confirm("Tüm katılımcı listesini silmek istiyor musunuz?")) return;
+    await fetch(`/api/events/${id}/participants`, {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clearAll: true }),
+    });
+    setParticipants([]);
   }
 
   if (loading) {
@@ -104,19 +179,25 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     return <div className="alert alert-danger">Etkinlik bulunamadı.</div>;
   }
 
+  // Yoklama için: hangi participant'lar geldi?
+  const attendedParticipantIds = new Set(
+    attendances.filter((a) => a.participantId).map((a) => a.participantId!)
+  );
+  const presentCount = participants.filter((p) => attendedParticipantIds.has(p.id)).length;
+  // Walk-in (listede olmayan ama gelen)
+  const walkIns = attendances.filter((a) => !a.isRegistered && !a.isManual);
+
   return (
     <div className="fade-in-up">
       {/* Header */}
       <div className="page-header">
         <div>
-          <Link href="/dashboard" style={{ color: "var(--text-muted)", fontSize: 13 }}>
-            ← Dashboard
-          </Link>
+          <Link href="/dashboard" style={{ color: "var(--text-muted)", fontSize: 13 }}>← Dashboard</Link>
           <h1 className="page-title" style={{ marginTop: 4 }}>{event.title}</h1>
           <p className="page-subtitle">
             📅 {formatDate(event.startsAt)} — {formatDate(event.endsAt)}
             {event.locationLat && (
-              <span style={{ marginLeft: 12 }}>📍 Konum doğrulaması aktif ({event.locationRadiusM}m)</span>
+              <span style={{ marginLeft: 12 }}>📍 Konum aktif ({event.locationRadiusM}m)</span>
             )}
           </p>
         </div>
@@ -125,14 +206,44 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
         </a>
       </div>
 
+      {/* CSV Upload bar */}
+      <div className="card" style={{ marginBottom: 20, padding: "16px 20px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+          <div>
+            <span style={{ fontSize: 14, fontWeight: 600 }}>Katılımcı Listesi</span>
+            <span style={{ fontSize: 13, color: "var(--text-secondary)", marginLeft: 10 }}>
+              {participants.length > 0
+                ? `${participants.length} kişi yüklendi`
+                : "Henüz liste yüklenmedi"}
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {participants.length > 0 && (
+              <button className="btn btn-danger btn-sm" onClick={clearParticipants}>
+                Listeyi Temizle
+              </button>
+            )}
+            <label className={`btn btn-${participants.length > 0 ? "secondary" : "primary"} btn-sm`} style={{ cursor: "pointer" }}>
+              {csvLoading ? "Yükleniyor..." : participants.length > 0 ? "CSV Güncelle" : "CSV Yükle"}
+              <input type="file" accept=".csv" style={{ display: "none" }} onChange={handleCsvImport} disabled={csvLoading} />
+            </label>
+          </div>
+        </div>
+        {csvError && <div className="alert alert-danger" style={{ marginTop: 10, fontSize: 13 }}>⚠️ {csvError}</div>}
+        {participants.length === 0 && (
+          <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 10 }}>
+            CSV sütun başlıkları: <strong>Ad Soyad</strong>, Email (opsiyonel), Telefon (opsiyonel)
+          </p>
+        )}
+      </div>
+
       {/* Tabs */}
       <div style={{
         display: "flex", gap: 4,
         background: "var(--bg-card)",
         border: "1px solid var(--border)",
         borderRadius: "var(--radius)",
-        padding: 4,
-        marginBottom: 24,
+        padding: 4, marginBottom: 24,
         width: "fit-content",
       }}>
         {(["qr", "attendance"] as Tab[]).map((t) => (
@@ -148,7 +259,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
             }}
           >
             {t === "qr" && "📲 QR Kod"}
-            {t === "attendance" && `✅ Yoklama (${attendances.length})`}
+            {t === "attendance" && `✅ Yoklama${participants.length > 0 ? ` (${presentCount}/${participants.length})` : ` (${attendances.length})`}`}
           </button>
         ))}
       </div>
@@ -194,17 +305,13 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
                 <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 8 }}>
                   <button className="btn btn-secondary btn-sm" onClick={() => setShowQrUrl(!showQrUrl)}>
-                    {showQrUrl ? "🔒 URL'i Gizle" : "🔗 Katılım URL'ini Göster"}
+                    {showQrUrl ? "URL'i Gizle" : "Katılım URL'ini Göster"}
                   </button>
                   {showQrUrl && (
                     <div style={{
-                      background: "var(--bg-elevated)",
-                      borderRadius: "var(--radius-sm)",
-                      padding: "10px 14px",
-                      fontSize: 12,
-                      color: "var(--text-secondary)",
-                      wordBreak: "break-all",
-                      border: "1px solid var(--border)",
+                      background: "var(--bg-elevated)", borderRadius: "var(--radius-sm)",
+                      padding: "10px 14px", fontSize: 12, color: "var(--text-secondary)",
+                      wordBreak: "break-all", border: "1px solid var(--border)",
                     }}>
                       {qrData.attendUrl}
                     </div>
@@ -212,7 +319,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                 </div>
               </>
             ) : (
-              <div style={{ color: "var(--text-muted)" }}>QR kod yükleniyor...</div>
+              <div style={{ color: "var(--text-muted)" }}>Yükleniyor...</div>
             )}
           </div>
 
@@ -220,18 +327,16 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
             <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Nasıl Çalışır?</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {[
-                { icon: "📱", title: "QR Okut", desc: "Katılımcılar telefon kamerasıyla bu QR kodu okutur" },
-                { icon: "📍", title: "Konum Doğrula", desc: event.locationLat ? `Etkinlik alanında (${event.locationRadiusM}m) olması gerekiyor` : "Konum doğrulaması devre dışı" },
-                { icon: "✅", title: "Otomatik Kayıt", desc: "Katılım bilgileri anında sisteme işlenir" },
+                { icon: "📂", title: "Listeyi Yükle", desc: "Etkinlikten önce CSV ile katılımcı listesi yükleyin" },
+                { icon: "📱", title: "QR Okut", desc: "Katılımcılar telefon kamerasıyla QR kodu okutup adlarını yazar" },
+                { icon: "🔍", title: "Otomatik Eşleştirme", desc: "Sistem adı listede arar ve Var/Yok durumunu işaretler" },
                 { icon: "🔄", title: "Her dakika yenilenir", desc: "Güvenlik için QR kod 60 saniyede bir değişir" },
               ].map((item, i) => (
                 <div key={i} style={{ display: "flex", gap: 12 }}>
                   <div style={{
                     width: 36, height: 36, flexShrink: 0,
-                    background: "var(--bg-elevated)",
-                    borderRadius: 10,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 18,
+                    background: "var(--bg-elevated)", borderRadius: 10,
+                    display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18,
                   }}>{item.icon}</div>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 600 }}>{item.title}</div>
@@ -246,23 +351,40 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
       {/* ATTENDANCE TAB */}
       {tab === "attendance" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-            <div>
-              <span style={{ fontSize: 14, color: "var(--text-secondary)" }}>
-                Toplam <strong style={{ color: "var(--text-primary)" }}>{attendances.length}</strong> katılım kaydı
-              </span>
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+
+          {/* İstatistik */}
+          {participants.length > 0 && (
+            <div className="stat-grid" style={{ marginBottom: 0 }}>
+              <div className="stat-card">
+                <div className="stat-value" style={{ color: "var(--success)" }}>{presentCount}</div>
+                <div className="stat-label">Gelen</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-value" style={{ color: "var(--danger)" }}>{participants.length - presentCount}</div>
+                <div className="stat-label">Gelmeyen</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-value">{participants.length}</div>
+                <div className="stat-label">Toplam Kayıtlı</div>
+              </div>
+              {walkIns.length > 0 && (
+                <div className="stat-card">
+                  <div className="stat-value" style={{ color: "var(--accent)" }}>{walkIns.length}</div>
+                  <div className="stat-label">Walk-in</div>
+                </div>
+              )}
             </div>
+          )}
+
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
             <a href={`/api/events/${id}/export`} className="btn btn-success btn-sm">
               📊 Excel İndir
             </a>
           </div>
 
-          {attendances.length === 0 ? (
-            <div className="card" style={{ textAlign: "center", padding: "40px 24px", color: "var(--text-muted)" }}>
-              Henüz yoklama kaydı yok. Katılımcılar QR kodu okutunca burada görünür.
-            </div>
-          ) : (
+          {/* Kayıtlı katılımcı listesi: Var / Yok */}
+          {participants.length > 0 ? (
             <div className="table-wrapper">
               <table>
                 <thead>
@@ -270,35 +392,85 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                     <th>#</th>
                     <th>Ad Soyad</th>
                     <th>E-posta</th>
+                    <th>Durum</th>
                     <th>Katılım Zamanı</th>
-                    <th>Tür</th>
-                    <th>İşlem</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {attendances.map((a, i) => (
-                    <tr key={a.id}>
-                      <td style={{ color: "var(--text-muted)", fontSize: 13 }}>{i + 1}</td>
-                      <td style={{ fontWeight: 500 }}>{a.name}</td>
-                      <td style={{ color: "var(--text-secondary)" }}>{a.email || "-"}</td>
-                      <td style={{ color: "var(--text-secondary)", fontSize: 13 }}>{formatDate(a.checkedInAt)}</td>
-                      <td>
-                        {a.isManual
-                          ? <span className="badge badge-warning">Manuel</span>
-                          : a.isRegistered
-                          ? <span className="badge badge-success">Kayıtlı</span>
-                          : <span className="badge badge-info">Walk-in</span>
-                        }
-                      </td>
-                      <td>
-                        <button className="btn btn-danger btn-sm" onClick={() => removeAttendance(a.id)}>
-                          Kaldır
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {participants.map((p, i) => {
+                    const att = attendances.find((a) => a.participantId === p.id);
+                    return (
+                      <tr key={p.id}>
+                        <td style={{ color: "var(--text-muted)", fontSize: 13 }}>{i + 1}</td>
+                        <td style={{ fontWeight: 500 }}>{p.name}</td>
+                        <td style={{ color: "var(--text-secondary)", fontSize: 13 }}>{p.email || "-"}</td>
+                        <td>
+                          {att
+                            ? <span className="badge badge-success">✓ Var</span>
+                            : <span className="badge badge-danger">✗ Yok</span>
+                          }
+                        </td>
+                        <td style={{ color: "var(--text-secondary)", fontSize: 13 }}>
+                          {att ? formatDate(att.checkedInAt) : "-"}
+                        </td>
+                        <td>
+                          {att && (
+                            <button className="btn btn-danger btn-sm" onClick={() => removeAttendance(att.id)}>
+                              Kaldır
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
+            </div>
+          ) : (
+            <div className="card" style={{ textAlign: "center", padding: "32px 24px", color: "var(--text-muted)" }}>
+              Katılımcı listesi yüklenmemiş. Yoklama kaydı yine de tutulur.
+            </div>
+          )}
+
+          {/* Walk-in'ler (listede olmayan gelenler) */}
+          {walkIns.length > 0 && (
+            <div>
+              <h3 style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 12 }}>
+                Listede Olmayan Katılımcılar (Walk-in)
+              </h3>
+              <div className="table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Ad Soyad</th>
+                      <th>E-posta</th>
+                      <th>Katılım Zamanı</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {walkIns.map((a) => (
+                      <tr key={a.id}>
+                        <td style={{ fontWeight: 500 }}>{a.name}</td>
+                        <td style={{ color: "var(--text-secondary)", fontSize: 13 }}>{a.email || "-"}</td>
+                        <td style={{ color: "var(--text-secondary)", fontSize: 13 }}>{formatDate(a.checkedInAt)}</td>
+                        <td>
+                          <button className="btn btn-danger btn-sm" onClick={() => removeAttendance(a.id)}>
+                            Kaldır
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {participants.length === 0 && attendances.length === 0 && (
+            <div className="card" style={{ textAlign: "center", padding: "40px 24px", color: "var(--text-muted)" }}>
+              Henüz yoklama kaydı yok. Katılımcılar QR kodu okutunca burada görünür.
             </div>
           )}
         </div>
