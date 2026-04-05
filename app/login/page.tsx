@@ -92,7 +92,7 @@ function LoginContent() {
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: "36px" }}>
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
-            <Image src="/Logo.png" alt="Logo" width={64} height={64} style={{ objectFit: "contain" }} />
+            <Image src="/Logo.png" alt="Logo" width={128} height={128} style={{ objectFit: "contain" }} />
           </div>
           <h1 style={{ fontSize: 28, fontWeight: 800 }} className="gradient-text">
             QR Yoklama

@@ -31,7 +31,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               display: "flex", alignItems: "center", justifyContent: "center",
               flexShrink: 0,
             }}>
-              <Image src="/Logo.png" alt="Logo" width={36} height={36} style={{ objectFit: "contain" }} />
+              <Image src="/Logo.png" alt="Logo" width={56} height={56} style={{ objectFit: "contain" }} />
             </div>
             <div>
               <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>

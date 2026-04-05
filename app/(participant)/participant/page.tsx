@@ -37,7 +37,7 @@ export default function ParticipantDashboard() {
         
         <div style={{ textAlign: "center", marginBottom: 40 }}>
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
-            <Image src="/Logo.png" alt="Logo" width={64} height={64} style={{ objectFit: "contain" }} />
+            <Image src="/Logo.png" alt="Logo" width={96} height={96} style={{ objectFit: "contain" }} />
           </div>
           <h1 style={{ fontSize: 24, fontWeight: 700 }}>Hoş geldiniz, {user?.name || "Katılımcı"}!</h1>
           <p style={{ color: "var(--text-secondary)", marginTop: 8 }}>

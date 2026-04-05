@@ -176,7 +176,7 @@ export default function AttendPage({ params }: { params: Promise<{ token: string
 
         <div style={{ textAlign: "center", marginBottom: 32, marginTop: 24 }}>
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
-            <Image src="/Logo.png" alt="Logo" width={56} height={56} style={{ objectFit: "contain" }} />
+            <Image src="/Logo.png" alt="Logo" width={80} height={80} style={{ objectFit: "contain" }} />
           </div>
           <h1 style={{ fontSize: 22, fontWeight: 700 }}>Katılım Formu</h1>
           {event && (
