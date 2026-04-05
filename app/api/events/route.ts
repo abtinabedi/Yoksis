@@ -18,8 +18,8 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const token = request.cookies.get("auth_token")?.value;
   const user = token ? await verifyToken(token) : null;
-  if (!user) {
-    return NextResponse.json({ error: "Yetkisiz erişim." }, { status: 401 });
+  if (!user || user.role !== "admin") {
+    return NextResponse.json({ error: "Yetkisiz işlem." }, { status: 403 });
   }
 
   const body = await request.json();

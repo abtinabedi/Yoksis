@@ -12,7 +12,7 @@ function LoginContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const redirectUrl = searchParams.get("redirect") || "/dashboard";
+  const redirectUrl = searchParams.get("redirect");
 
   // Login fields
   const [loginEmail, setLoginEmail] = useState("");
@@ -35,8 +35,12 @@ function LoginContent() {
         body: JSON.stringify({ email: loginEmail, password: loginPassword }),
       });
       const data = await res.json();
-      if (!res.ok) setError(data.error || "Giriş başarısız.");
-      else router.push(redirectUrl);
+      if (!res.ok) {
+        setError(data.error || "Giriş başarısız.");
+      } else {
+        const defaultRoute = data.role === "admin" ? "/dashboard" : "/participant";
+        router.push(redirectUrl || defaultRoute);
+      }
     } catch {
       setError("Bağlantı hatası. Lütfen tekrar deneyin.");
     } finally {
@@ -61,8 +65,12 @@ function LoginContent() {
         body: JSON.stringify({ name: regName, email: regEmail, password: regPassword }),
       });
       const data = await res.json();
-      if (!res.ok) setError(data.error || "Kayıt başarısız.");
-      else router.push(redirectUrl);
+      if (!res.ok) {
+        setError(data.error || "Kayıt başarısız.");
+      } else {
+        const defaultRoute = data.role === "admin" ? "/dashboard" : "/participant";
+        router.push(redirectUrl || defaultRoute);
+      }
     } catch {
       setError("Bağlantı hatası. Lütfen tekrar deneyin.");
     } finally {

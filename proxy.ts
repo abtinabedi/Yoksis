@@ -18,6 +18,10 @@ export async function proxy(request: NextRequest) {
       if (pathname.startsWith("/attend")) url.searchParams.set("redirect", pathname);
       return NextResponse.redirect(url);
     }
+
+    if ((pathname.startsWith("/dashboard") || pathname.startsWith("/events")) && payload.role !== "admin") {
+      return NextResponse.redirect(new URL("/participant", request.url));
+    }
   }
 
   return NextResponse.next();
