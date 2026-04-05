@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { events, attendances, participants } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { verifyQrToken, haversineDistance } from "@/lib/qr";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { eventId, token: qrToken, lat, lng, name, email, phone } = body;
+    const { eventId, token: qrToken, lat, lng, name, email, phone, deviceId } = body;
 
     if (!eventId || !qrToken) {
       return NextResponse.json({ error: "Geçersiz istek." }, { status: 400 });
@@ -30,7 +30,22 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // 3. Konum doğrula (etkinliğin konumu varsa)
+    // 3. Cihaz kontrolü — aynı cihaz bu etkinliğe daha önce katıldı mı?
+    if (deviceId) {
+      const [existingDevice] = await db
+        .select()
+        .from(attendances)
+        .where(and(eq(attendances.eventId, eventId), eq(attendances.deviceId, deviceId)));
+
+      if (existingDevice) {
+        return NextResponse.json({
+          error: "Bu cihazdan zaten katılım kaydı oluşturulmuş.",
+          alreadyCheckedIn: true,
+        }, { status: 409 });
+      }
+    }
+
+    // 4. Konum doğrula (etkinliğin konumu varsa)
     if (event.locationLat && event.locationLng) {
       if (!lat || !lng) {
         return NextResponse.json({
@@ -46,7 +61,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 4. Sisteme kayıtlı katılımcılarla isim eşleştirmesi (büyük/küçük harf duyarsız)
+    // 5. İsim eşleştirme (büyük/küçük harf duyarsız)
     const normalizedInput = name.trim().toLowerCase().replace(/\s+/g, " ");
 
     const allParticipants = await db
@@ -58,7 +73,7 @@ export async function POST(request: NextRequest) {
       (p) => p.name.trim().toLowerCase().replace(/\s+/g, " ") === normalizedInput
     );
 
-    // 5. Çift kayıt kontrolü — aynı isim zaten var mı?
+    // 6. İsim ile çift kayıt kontrolü
     const existingAttendances = await db
       .select()
       .from(attendances)
@@ -75,19 +90,20 @@ export async function POST(request: NextRequest) {
       }, { status: 409 });
     }
 
-    // 6. Katılım kaydı oluştur
+    // 7. Katılım kaydı oluştur
     const [record] = await db
       .insert(attendances)
       .values({
         eventId,
         participantId: matched?.id ?? null,
-        name: matched ? matched.name : name.trim(), // CSV'deki doğru yazımı kullan
+        name: matched ? matched.name : name.trim(),
         email: email || matched?.email || null,
         phone: phone || matched?.phone || null,
         lat: lat || null,
         lng: lng || null,
         isRegistered: !!matched,
         isManual: false,
+        deviceId: deviceId || null,
       })
       .returning();
 

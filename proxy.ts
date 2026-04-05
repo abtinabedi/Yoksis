@@ -5,14 +5,18 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Admin rotaları koru (/dashboard, /events, vs. — /login hariç)
-  if (pathname.startsWith("/dashboard") || pathname.startsWith("/events")) {
+  if (pathname.startsWith("/dashboard") || pathname.startsWith("/events") || pathname.startsWith("/attend")) {
     const token = request.cookies.get("auth_token")?.value;
     if (!token) {
-      return NextResponse.redirect(new URL("/login", request.url));
+      const url = new URL("/login", request.url);
+      if (pathname.startsWith("/attend")) url.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(url);
     }
     const payload = await verifyToken(token);
     if (!payload) {
-      return NextResponse.redirect(new URL("/login", request.url));
+      const url = new URL("/login", request.url);
+      if (pathname.startsWith("/attend")) url.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(url);
     }
   }
 
@@ -20,5 +24,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/events/:path*"],
+  matcher: ["/dashboard/:path*", "/events/:path*", "/attend/:path*"],
 };

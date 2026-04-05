@@ -25,24 +25,55 @@ interface Event {
   locationRadiusM: number | null;
 }
 
-type Status = "idle" | "scanning" | "locating" | "form" | "submitting" | "success" | "error";
+type Status = "idle" | "scanning" | "locating" | "ready" | "submitting" | "success" | "error";
+
+interface Session {
+  userId: number;
+  email: string;
+  name: string;
+  role: string;
+}
 
 export default function AttendPage({ params }: { params: Promise<{ token: string }> }) {
   const { token: eventId } = use(params);
   const searchParams = useSearchParams();
   const qrToken = searchParams.get("t") || "";
 
+  const [session, setSession] = useState<Session | null>(null);
+  const [sessionLoading, setSessionLoading] = useState(true);
+
   const [event, setEvent] = useState<Event | null>(null);
   const [status, setStatus] = useState<Status>("idle");
   const [errorMsg, setErrorMsg] = useState("");
   const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [form, setForm] = useState({ name: "", email: "", phone: "" });
   const [successMsg, setSuccessMsg] = useState("");
   const [scannedToken, setScannedToken] = useState(qrToken);
   const [scannedEventId, setScannedEventId] = useState(eventId);
   const [submitting, setSubmitting] = useState(false);
+  const [deviceId, setDeviceId] = useState("");
 
-  // Load event info
+  // Oturumu getir
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.user) setSession(data.user);
+      })
+      .finally(() => setSessionLoading(false));
+  }, []);
+
+  // Cihaz ID'sini oluştur veya localStorage'dan al
+  useEffect(() => {
+    const KEY = "qr_device_id";
+    let id = localStorage.getItem(KEY);
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem(KEY, id);
+    }
+    setDeviceId(id);
+  }, []);
+
+  // Event bilgisini getir
   useEffect(() => {
     if (eventId) {
       fetch(`/api/events/${eventId}`)
@@ -54,16 +85,14 @@ export default function AttendPage({ params }: { params: Promise<{ token: string
     }
   }, [eventId]);
 
-  // If QR token already in URL → go straight to locating
+  // QR token direkt URL'den geliyorsa ready durumuna geç
   useEffect(() => {
-    if (qrToken && eventId) {
-      startProcess(eventId, qrToken);
+    if (qrToken && eventId && session) {
+      setStatus("ready");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [qrToken, eventId, session]);
 
   function handleScan(result: string) {
-    // Parse URL from QR scan
     try {
       const url = new URL(result);
       const pathParts = url.pathname.split("/");
@@ -71,22 +100,24 @@ export default function AttendPage({ params }: { params: Promise<{ token: string
       const t = url.searchParams.get("t") || "";
       setScannedEventId(scannedId);
       setScannedToken(t);
-      startProcess(scannedId, t);
+      setStatus("ready");
     } catch {
       setErrorMsg("Geçersiz QR kod. Lütfen etkinliğe ait QR kodu okutun.");
       setStatus("error");
     }
   }
 
-  async function startProcess(evId: string, token: string) {
+  async function handleConfirmCheckIn() {
+    if (!session) return;
     setStatus("locating");
+    setSubmitting(true);
     setErrorMsg("");
 
-    // Get location
     let lat: number | null = null;
     let lng: number | null = null;
 
     try {
+      // Tarayıcı konum onayı isterse diye butona basınca konum istiyoruz
       const pos = await new Promise<GeolocationPosition>((res, rej) =>
         navigator.geolocation.getCurrentPosition(res, rej, {
           timeout: 15000,
@@ -97,21 +128,10 @@ export default function AttendPage({ params }: { params: Promise<{ token: string
       lng = pos.coords.longitude;
       setLocation({ lat, lng });
     } catch {
-      // Konum alınamazsa sunucu kontrol edecek
+      // Konum alınamazsa izin verilmedi veya hata oluştu
     }
 
-    // Check if registered (via email — show form first)
-    setStatus("form");
-    setScannedEventId(evId);
-    setScannedToken(token);
-    if (lat) setLocation({ lat: lat!, lng: lng! });
-  }
-
-  async function handleFormSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setSubmitting(true);
     setStatus("submitting");
-    setErrorMsg("");
 
     try {
       const res = await fetch("/api/attend", {
@@ -120,11 +140,12 @@ export default function AttendPage({ params }: { params: Promise<{ token: string
         body: JSON.stringify({
           eventId: scannedEventId,
           token: scannedToken,
-          lat: location?.lat,
-          lng: location?.lng,
-          name: form.name || null,
-          email: form.email || null,
-          phone: form.phone || null,
+          lat: lat,
+          lng: lng,
+          name: session.name,     // Hesaptaki ismi otomatik alıyoruz
+          email: session.email,   // Hesaptaki maili otomatik alıyoruz
+          phone: null,
+          deviceId: deviceId || null,
         }),
       });
       const data = await res.json();
@@ -144,206 +165,114 @@ export default function AttendPage({ params }: { params: Promise<{ token: string
     }
   }
 
-  function reset() {
-    setStatus("scanning");
-    setErrorMsg("");
-    setForm({ name: "", email: "", phone: "" });
-    setLocation(null);
+  if (sessionLoading) {
+    return <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>Yükleniyor...</div>;
   }
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: "radial-gradient(ellipse at 50% 0%, rgba(79,122,255,0.1) 0%, transparent 60%), var(--bg)",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      padding: "24px 16px",
-    }}>
-      <div style={{ width: "100%", maxWidth: 480 }}>
-        {/* Header */}
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <div style={{ fontSize: 40, marginBottom: 12 }}>📋</div>
-          <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 4 }}>
-            {event?.title || "QR Yoklama"}
-          </h1>
+    <div style={{ minHeight: "100vh", padding: 20 }}>
+      <div style={{ maxWidth: 400, margin: "0 auto" }} className="fade-in-up">
+
+        <div style={{ textAlign: "center", marginBottom: 32, marginTop: 24 }}>
+          <div style={{
+            width: 48, height: 48, background: "var(--accent-dim)", borderRadius: 12,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            margin: "0 auto 12px", fontSize: 20,
+          }}>📋</div>
+          <h1 style={{ fontSize: 22, fontWeight: 700 }}>Katılım Formu</h1>
           {event && (
-            <p style={{ fontSize: 13, color: "var(--text-secondary)" }}>
-              {new Date(event.startsAt).toLocaleString("tr-TR", {
-                day: "2-digit", month: "long", year: "numeric",
-                hour: "2-digit", minute: "2-digit",
-              })}
+            <p style={{ marginTop: 6, color: "var(--text-secondary)", fontSize: 14 }}>
+              {event.title}
             </p>
           )}
         </div>
 
-        {/* IDLE — scan button */}
-        {status === "idle" && !qrToken && (
-          <div className="card fade-in-up" style={{ textAlign: "center" }}>
-            <p style={{ color: "var(--text-secondary)", marginBottom: 20, fontSize: 14 }}>
-              Etkinliğe katılmak için QR kodu okutun
+        {/* --- IDLE (Başlangıç veya Tarayıcı) --- */}
+        {status === "idle" && (
+          <div className="card" style={{ textAlign: "center" }}>
+            <p style={{ color: "var(--text-secondary)", fontSize: 15, marginBottom: 20 }}>
+              Katılım kaydınızı oluşturmak için telefon kameranızla etkinlik QR kodunu okutun veya cihazınızın kamerasını açın.
             </p>
-            <button
-              className="btn btn-primary"
-              style={{ width: "100%", height: 52, fontSize: 16 }}
-              onClick={() => setStatus("scanning")}
-            >
-              📷 QR Kod Okut
+            <button className="btn btn-primary" style={{ width: "100%" }} onClick={() => setStatus("scanning")}>
+              📷 Kamerayı Aç
             </button>
           </div>
         )}
 
-        {/* SCANNING */}
+        {/* --- SCANNING --- */}
         {status === "scanning" && (
-          <div className="card fade-in-up">
-            <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, textAlign: "center" }}>
-              Kamerayı QR Koda Tutun
-            </h2>
-            <QrScanner onScan={handleScan} />
-            <button
-              className="btn btn-secondary"
-              style={{ width: "100%", marginTop: 12 }}
-              onClick={() => setStatus("idle")}
-            >
-              İptal
-            </button>
-          </div>
-        )}
-
-        {/* LOCATING */}
-        {status === "locating" && (
-          <div className="card fade-in-up" style={{ textAlign: "center", padding: 40 }}>
-            <div style={{ fontSize: 40, marginBottom: 16 }}>📍</div>
-            <p style={{ fontSize: 15, fontWeight: 600 }}>Konumunuz alınıyor...</p>
-            <p style={{ fontSize: 13, color: "var(--text-secondary)", marginTop: 8 }}>
-              Lütfen bekleyin
-            </p>
-          </div>
-        )}
-
-        {/* FORM */}
-        {status === "form" && (
-          <div className="card fade-in-up">
-            <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>Katılım Bilgileri</h2>
-            <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 20 }}>
-              Katılım kaydınızı oluşturmak için bilgilerinizi girin
-            </p>
-
-            {location && (
-              <div className="alert alert-success" style={{ marginBottom: 16, fontSize: 13 }}>
-                ✓ Konumunuz alındı
-              </div>
-            )}
-            {!location && (
-              <div className="alert alert-warning" style={{ marginBottom: 16, fontSize: 13 }}>
-                ⚠️ Konum alınamadı — etkinlikte konum doğrulaması aktifse katılım reddedilebilir
-              </div>
-            )}
-
-            <form onSubmit={handleFormSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <div className="form-field">
-                <label>Ad Soyad *</label>
-                <input
-                  type="text"
-                  placeholder="Ahmet Yılmaz"
-                  value={form.name}
-                  onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                  required
-                />
-                <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
-                  Katılımcı listesindeki adınızı tam olarak yazın
-                </span>
-              </div>
-
-              <div className="form-field">
-                <label>E-posta</label>
-                <input
-                  type="email"
-                  placeholder="ahmet@ornek.com"
-                  value={form.email}
-                  onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
-                />
-              </div>
-
-              <div className="form-field">
-                <label>Telefon</label>
-                <input
-                  type="tel"
-                  placeholder="05xx xxx xx xx"
-                  value={form.phone}
-                  onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="btn btn-primary"
-                style={{ height: 52, fontSize: 15, marginTop: 4 }}
-                disabled={submitting}
-              >
-                ✓ Katılımı Onayla
+          <div className="card" style={{ padding: 0, overflow: "hidden" }}>
+            <QrScanner onResult={handleScan} />
+            <div style={{ padding: 16 }}>
+              <button className="btn btn-secondary" style={{ width: "100%" }} onClick={() => setStatus("idle")}>
+                İptal Et
               </button>
-            </form>
-          </div>
-        )}
-
-        {/* SUBMITTING */}
-        {status === "submitting" && (
-          <div className="card fade-in-up" style={{ textAlign: "center", padding: 40 }}>
-            <div style={{ fontSize: 40, marginBottom: 16 }}>⏳</div>
-            <p style={{ fontSize: 15, fontWeight: 600 }}>Kaydediliyor...</p>
-          </div>
-        )}
-
-        {/* SUCCESS */}
-        {status === "success" && (
-          <div className="card fade-in-up" style={{ textAlign: "center", padding: 40 }}>
-            <div style={{
-              width: 72, height: 72,
-              background: "var(--success-dim)",
-              border: "2px solid var(--success)",
-              borderRadius: "50%",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 32, margin: "0 auto 20px",
-            }}>
-              ✓
             </div>
-            <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--success)", marginBottom: 8 }}>
-              Katılımınız Kaydedildi!
-            </h2>
-            <p style={{ fontSize: 14, color: "var(--text-secondary)" }}>{successMsg}</p>
-            {event && (
-              <p style={{ fontSize: 13, color: "var(--text-muted)", marginTop: 16 }}>
-                {event.title}
-              </p>
-            )}
           </div>
         )}
 
-        {/* ERROR */}
-        {status === "error" && (
-          <div className="card fade-in-up" style={{ textAlign: "center", padding: 40 }}>
+        {/* --- READY --- */}
+        {(status === "ready" || status === "locating" || status === "submitting") && (
+          <div className="card" style={{ textAlign: "center" }}>
             <div style={{
-              width: 72, height: 72,
-              background: "var(--danger-dim)",
-              border: "2px solid var(--danger)",
-              borderRadius: "50%",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 32, margin: "0 auto 20px",
-            }}>
-              ✗
-            </div>
-            <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--danger)", marginBottom: 12 }}>
-              Hata
+              width: 56, height: 56, background: "rgba(16,185,129,0.1)", color: "var(--success)",
+              borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+              margin: "0 auto 16px", fontSize: 24
+            }}>👤</div>
+            <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>
+              Hoş geldiniz, {session?.name}!
             </h2>
             <p style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 24 }}>
-              {errorMsg}
+              Hesabınızla eşleşme yapıldı.
+              Katılımınızı onaylamak için aşağıdaki butona basın.
             </p>
-            <button className="btn btn-secondary" onClick={reset} style={{ width: "100%" }}>
-              ← Tekrar Dene
+
+            <button
+              className="btn btn-primary"
+              style={{ width: "100%", height: 48, fontSize: 15 }}
+              onClick={handleConfirmCheckIn}
+              disabled={submitting}
+            >
+              {status === "locating" ? "📍 Konum Doğrulanıyor..." :
+               status === "submitting" ? "⏳ Kaydediliyor..." :
+               "✓ Çek-in Yap"}
             </button>
           </div>
         )}
+
+        {/* --- ERROR --- */}
+        {status === "error" && (
+          <div className="card" style={{ textAlign: "center" }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>❌</div>
+            <h2 style={{ fontSize: 18, fontWeight: 600, color: "var(--danger)", marginBottom: 8 }}>
+              İşlem Başarısız
+            </h2>
+            <p style={{ color: "var(--text-secondary)", fontSize: 14, marginBottom: 20 }}>
+              {errorMsg}
+            </p>
+            <button className="btn btn-secondary" style={{ width: "100%" }} onClick={() => {
+              // Eğer kod URL'den geldiyse tekrar ready'ye dön, QR'dan geldiyse scanning'e dön
+              if (scannedToken) setStatus("ready");
+              else setStatus("scanning");
+            }}>
+              Tekrar Dene
+            </button>
+          </div>
+        )}
+
+        {/* --- SUCCESS --- */}
+        {status === "success" && (
+          <div className="card" style={{ textAlign: "center", background: "rgba(16, 185, 129, 0.05)" }}>
+            <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--success)", marginBottom: 8 }}>
+              Başarılı!
+            </h2>
+            <p style={{ color: "var(--text-secondary)", fontSize: 15 }}>
+              {successMsg}
+            </p>
+          </div>
+        )}
+
       </div>
     </div>
   );

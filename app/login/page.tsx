@@ -1,15 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 type Tab = "login" | "register";
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [tab, setTab] = useState<Tab>("login");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const redirectUrl = searchParams.get("redirect") || "/dashboard";
 
   // Login fields
   const [loginEmail, setLoginEmail] = useState("");
@@ -33,7 +36,7 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) setError(data.error || "Giriş başarısız.");
-      else router.push("/dashboard");
+      else router.push(redirectUrl);
     } catch {
       setError("Bağlantı hatası. Lütfen tekrar deneyin.");
     } finally {
@@ -59,7 +62,7 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) setError(data.error || "Kayıt başarısız.");
-      else router.push("/dashboard");
+      else router.push(redirectUrl);
     } catch {
       setError("Bağlantı hatası. Lütfen tekrar deneyin.");
     } finally {
@@ -262,5 +265,13 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div>Yükleniyor...</div>}>
+      <LoginContent />
+    </Suspense>
   );
 }

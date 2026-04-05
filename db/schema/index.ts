@@ -5,6 +5,7 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
   name: text("name").notNull(),
+  role: text("role").default("participant").notNull(), // "admin" | "participant"
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -43,4 +44,5 @@ export const attendances = pgTable("attendances", {
   lng: real("lng"),
   isRegistered: boolean("is_registered").default(false),
   isManual: boolean("is_manual").default(false),
+  deviceId: text("device_id"),
 });

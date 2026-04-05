@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Geçersiz email veya şifre." }, { status: 401 });
     }
 
-    const token = await signToken({ userId: user.id, email: user.email });
+    const token = await signToken({ userId: user.id, email: user.email, name: user.name, role: user.role });
 
     const response = NextResponse.json({ success: true, name: user.name });
     response.cookies.set("auth_token", token, {

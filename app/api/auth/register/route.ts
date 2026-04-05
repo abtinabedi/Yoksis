@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
       .values({ name, email, passwordHash })
       .returning();
 
-    const token = await signToken({ userId: newUser.id, email: newUser.email });
+    const token = await signToken({ userId: newUser.id, email: newUser.email, name: newUser.name, role: newUser.role });
 
     const response = NextResponse.json({ success: true, name: newUser.name });
     response.cookies.set("auth_token", token, {
