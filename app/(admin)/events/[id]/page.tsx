@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, use } from "react";
 import Link from "next/link";
-import Papa from "papaparse";
 
 interface Event {
   id: string;
@@ -13,13 +12,6 @@ interface Event {
   locationLat: number | null;
   locationLng: number | null;
   locationRadiusM: number | null;
-}
-
-interface Participant {
-  id: string;
-  name: string;
-  email: string | null;
-  phone: string | null;
 }
 
 interface Attendance {
@@ -45,7 +37,7 @@ function formatDate(d: string) {
   });
 }
 
-type Tab = "qr" | "participants" | "attendance";
+type Tab = "qr" | "attendance";
 
 export default function EventDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -53,22 +45,16 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   const [event, setEvent] = useState<Event | null>(null);
   const [qrData, setQrData] = useState<QrData | null>(null);
   const [countdown, setCountdown] = useState(0);
-  const [participants, setParticipants] = useState<Participant[]>([]);
   const [attendances, setAttendances] = useState<Attendance[]>([]);
   const [loading, setLoading] = useState(true);
-  const [addForm, setAddForm] = useState({ name: "", email: "", phone: "" });
-  const [addLoading, setAddLoading] = useState(false);
-  const [csvError, setCsvError] = useState("");
   const [showQrUrl, setShowQrUrl] = useState(false);
 
-  // Load event
   useEffect(() => {
     fetch(`/api/events/${id}`)
       .then((r) => r.json())
       .then((data) => { setEvent(data); setLoading(false); });
   }, [id]);
 
-  // Load QR
   const refreshQr = useCallback(() => {
     fetch(`/api/events/${id}/qr`)
       .then((r) => r.json())
@@ -79,36 +65,20 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   }, [id]);
 
   useEffect(() => {
-    if (tab === "qr") {
-      refreshQr();
-    }
+    if (tab === "qr") refreshQr();
   }, [tab, refreshQr]);
 
-  // Countdown + auto-refresh QR
   useEffect(() => {
     if (tab !== "qr") return;
     const interval = setInterval(() => {
       setCountdown((prev) => {
-        if (prev <= 1) {
-          refreshQr();
-          return 60;
-        }
+        if (prev <= 1) { refreshQr(); return 60; }
         return prev - 1;
       });
     }, 1000);
     return () => clearInterval(interval);
   }, [tab, refreshQr]);
 
-  // Load participants
-  useEffect(() => {
-    if (tab === "participants") {
-      fetch(`/api/events/${id}/participants`)
-        .then((r) => r.json())
-        .then(setParticipants);
-    }
-  }, [tab, id]);
-
-  // Load attendances
   useEffect(() => {
     if (tab === "attendance") {
       fetch(`/api/events/${id}/attendance`)
@@ -116,46 +86,6 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
         .then(setAttendances);
     }
   }, [tab, id]);
-
-  async function addParticipant(e: React.FormEvent) {
-    e.preventDefault();
-    setAddLoading(true);
-    const res = await fetch(`/api/events/${id}/participants`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(addForm),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      setParticipants((prev) => [...prev, data[0]]);
-      setAddForm({ name: "", email: "", phone: "" });
-    }
-    setAddLoading(false);
-  }
-
-  async function deleteParticipant(participantId: string) {
-    if (!confirm("Bu katılımcıyı silmek istiyor musunuz?")) return;
-    await fetch(`/api/events/${id}/participants`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ participantId }),
-    });
-    setParticipants((prev) => prev.filter((p) => p.id !== participantId));
-  }
-
-  async function markAttendance(participantId: string) {
-    const res = await fetch(`/api/events/${id}/attendance`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ participantId }),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      setAttendances((prev) => [...prev, data]);
-    } else {
-      alert(data.error);
-    }
-  }
 
   async function removeAttendance(attendanceId: string) {
     await fetch(`/api/events/${id}/attendance`, {
@@ -165,45 +95,6 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     });
     setAttendances((prev) => prev.filter((a) => a.id !== attendanceId));
   }
-
-  function handleCsvImport(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setCsvError("");
-
-    Papa.parse(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: async (results) => {
-        const rows = results.data as Record<string, string>[];
-        const items = rows.map((row) => ({
-          name: row["Ad Soyad"] || row["name"] || row["isim"] || "",
-          email: row["Email"] || row["email"] || null,
-          phone: row["Telefon"] || row["phone"] || null,
-        })).filter((r) => r.name);
-
-        if (items.length === 0) {
-          setCsvError("CSV dosyasında geçerli veri bulunamadı. 'Ad Soyad' sütunu zorunludur.");
-          return;
-        }
-
-        const res = await fetch(`/api/events/${id}/participants`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(items),
-        });
-        const data = await res.json();
-        if (res.ok) {
-          setParticipants((prev) => [...prev, ...data]);
-        }
-        e.target.value = "";
-      },
-      error: () => setCsvError("CSV dosyası okunamadı."),
-    });
-  }
-
-  const progressDeg = countdown ? (countdown / 60) * 360 : 0;
-  const checkedIds = new Set(attendances.map((a) => a.participantId).filter(Boolean));
 
   if (loading) {
     return <div style={{ textAlign: "center", padding: 60, color: "var(--text-muted)" }}>Yükleniyor...</div>;
@@ -229,11 +120,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
             )}
           </p>
         </div>
-        <a
-          href={`/attend/${id}`}
-          target="_blank"
-          className="btn btn-secondary"
-        >
+        <a href={`/attend/${id}`} target="_blank" className="btn btn-secondary">
           🔗 Katılım Linki
         </a>
       </div>
@@ -248,7 +135,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
         marginBottom: 24,
         width: "fit-content",
       }}>
-        {(["qr", "participants", "attendance"] as Tab[]).map((t) => (
+        {(["qr", "attendance"] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -261,7 +148,6 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
             }}
           >
             {t === "qr" && "📲 QR Kod"}
-            {t === "participants" && `👥 Katılımcılar (${participants.length})`}
             {t === "attendance" && `✅ Yoklama (${attendances.length})`}
           </button>
         ))}
@@ -273,15 +159,12 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
           <div className="card" style={{ flex: 1, minWidth: 320, display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
             <div style={{ textAlign: "center" }}>
               <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>QR Kod</h2>
-              <p style={{ fontSize: 13, color: "var(--text-secondary)" }}>
-                Her dakika otomatik yenilenir
-              </p>
+              <p style={{ fontSize: 13, color: "var(--text-secondary)" }}>Her dakika otomatik yenilenir</p>
             </div>
 
             {qrData ? (
               <>
                 <div className="qr-container" style={{ position: "relative" }}>
-                  {/* Countdown ring overlay */}
                   <div style={{
                     position: "absolute", top: -8, right: -8,
                     width: 40, height: 40,
@@ -299,7 +182,6 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                   <img src={qrData.qrDataUrl} alt="QR Kod" style={{ width: 280, height: 280 }} />
                 </div>
 
-                {/* Countdown bar */}
                 <div style={{ width: "100%", background: "var(--bg-elevated)", borderRadius: 4, height: 4, overflow: "hidden" }}>
                   <div style={{
                     height: "100%",
@@ -311,10 +193,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                 </div>
 
                 <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 8 }}>
-                  <button
-                    className="btn btn-secondary btn-sm"
-                    onClick={() => setShowQrUrl(!showQrUrl)}
-                  >
+                  <button className="btn btn-secondary btn-sm" onClick={() => setShowQrUrl(!showQrUrl)}>
                     {showQrUrl ? "🔒 URL'i Gizle" : "🔗 Katılım URL'ini Göster"}
                   </button>
                   {showQrUrl && (
@@ -342,8 +221,8 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {[
                 { icon: "📱", title: "QR Okut", desc: "Katılımcılar telefon kamerasıyla bu QR kodu okutur" },
-                { icon: "📍", title: "Konum Doğrula", desc: `${event.locationLat ? `Etkinlik alanında (${event.locationRadiusM}m) olması gerekiyor` : "Konum doğrulaması devre dışı"}` },
-                { icon: "✅", title: "Otomatik Kayıt", desc: "Kayıtlı kullanıcılar için katılım anında kaydedilir" },
+                { icon: "📍", title: "Konum Doğrula", desc: event.locationLat ? `Etkinlik alanında (${event.locationRadiusM}m) olması gerekiyor` : "Konum doğrulaması devre dışı" },
+                { icon: "✅", title: "Otomatik Kayıt", desc: "Katılım bilgileri anında sisteme işlenir" },
                 { icon: "🔄", title: "Her dakika yenilenir", desc: "Güvenlik için QR kod 60 saniyede bir değişir" },
               ].map((item, i) => (
                 <div key={i} style={{ display: "flex", gap: 12 }}>
@@ -365,147 +244,30 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
         </div>
       )}
 
-      {/* PARTICIPANTS TAB */}
-      {tab === "participants" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-          {/* Add participant form */}
-          <div className="card">
-            <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Manuel Katılımcı Ekle</h3>
-            <form onSubmit={addParticipant} style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-              <div className="form-field" style={{ flex: 2, minWidth: 180 }}>
-                <label>Ad Soyad *</label>
-                <input
-                  type="text"
-                  placeholder="Ahmet Yılmaz"
-                  value={addForm.name}
-                  onChange={(e) => setAddForm((p) => ({ ...p, name: e.target.value }))}
-                  required
-                />
-              </div>
-              <div className="form-field" style={{ flex: 2, minWidth: 180 }}>
-                <label>E-posta</label>
-                <input
-                  type="email"
-                  placeholder="ahmet@ornek.com"
-                  value={addForm.email}
-                  onChange={(e) => setAddForm((p) => ({ ...p, email: e.target.value }))}
-                />
-              </div>
-              <div className="form-field" style={{ flex: 1, minWidth: 140 }}>
-                <label>Telefon</label>
-                <input
-                  type="tel"
-                  placeholder="05xx..."
-                  value={addForm.phone}
-                  onChange={(e) => setAddForm((p) => ({ ...p, phone: e.target.value }))}
-                />
-              </div>
-              <div className="form-field" style={{ justifyContent: "flex-end" }}>
-                <label>&nbsp;</label>
-                <button type="submit" className="btn btn-primary" disabled={addLoading}>
-                  {addLoading ? "..." : "+ Ekle"}
-                </button>
-              </div>
-            </form>
-          </div>
-
-          {/* CSV Import */}
-          <div className="card" style={{ borderStyle: "dashed" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 4 }}>📂 CSV ile Toplu Import</div>
-                <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                  CSV dosyanızda <strong>Ad Soyad</strong>, <strong>Email</strong>, <strong>Telefon</strong> sütunları olmalıdır
-                </div>
-              </div>
-              <label className="btn btn-secondary btn-sm" style={{ cursor: "pointer" }}>
-                CSV Yükle
-                <input type="file" accept=".csv" style={{ display: "none" }} onChange={handleCsvImport} />
-              </label>
-            </div>
-            {csvError && <div className="alert alert-danger" style={{ marginTop: 12 }}>⚠️ {csvError}</div>}
-          </div>
-
-          {/* Participants list */}
-          {participants.length === 0 ? (
-            <div className="card" style={{ textAlign: "center", padding: "40px 24px", color: "var(--text-muted)" }}>
-              Henüz kayıtlı katılımcı yok.
-            </div>
-          ) : (
-            <div className="table-wrapper">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Ad Soyad</th>
-                    <th>E-posta</th>
-                    <th>Telefon</th>
-                    <th>Durum</th>
-                    <th>İşlem</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {participants.map((p) => {
-                    const checked = checkedIds.has(p.id as unknown as string);
-                    return (
-                      <tr key={p.id}>
-                        <td style={{ fontWeight: 500 }}>{p.name}</td>
-                        <td style={{ color: "var(--text-secondary)" }}>{p.email || "-"}</td>
-                        <td style={{ color: "var(--text-secondary)" }}>{p.phone || "-"}</td>
-                        <td>
-                          {checked
-                            ? <span className="badge badge-success">✓ Var</span>
-                            : <span className="badge badge-danger">✗ Yok</span>
-                          }
-                        </td>
-                        <td>
-                          <div style={{ display: "flex", gap: 8 }}>
-                            {!checked && (
-                              <button
-                                className="btn btn-success btn-sm"
-                                onClick={() => markAttendance(p.id)}
-                              >
-                                ✓ İşaretle
-                              </button>
-                            )}
-                            <button
-                              className="btn btn-danger btn-sm"
-                              onClick={() => deleteParticipant(p.id)}
-                            >
-                              🗑
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* ATTENDANCE TAB */}
       {tab === "attendance" && (
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-          <div style={{ display: "flex", justifyContent: "flex-end" }}>
-            <a
-              href={`/api/events/${id}/export`}
-              className="btn btn-success btn-sm"
-            >
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+            <div>
+              <span style={{ fontSize: 14, color: "var(--text-secondary)" }}>
+                Toplam <strong style={{ color: "var(--text-primary)" }}>{attendances.length}</strong> katılım kaydı
+              </span>
+            </div>
+            <a href={`/api/events/${id}/export`} className="btn btn-success btn-sm">
               📊 Excel İndir
             </a>
           </div>
 
           {attendances.length === 0 ? (
             <div className="card" style={{ textAlign: "center", padding: "40px 24px", color: "var(--text-muted)" }}>
-              Henüz yoklama kaydı yok.
+              Henüz yoklama kaydı yok. Katılımcılar QR kodu okutunca burada görünür.
             </div>
           ) : (
             <div className="table-wrapper">
               <table>
                 <thead>
                   <tr>
+                    <th>#</th>
                     <th>Ad Soyad</th>
                     <th>E-posta</th>
                     <th>Katılım Zamanı</th>
@@ -514,13 +276,12 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                   </tr>
                 </thead>
                 <tbody>
-                  {attendances.map((a) => (
+                  {attendances.map((a, i) => (
                     <tr key={a.id}>
+                      <td style={{ color: "var(--text-muted)", fontSize: 13 }}>{i + 1}</td>
                       <td style={{ fontWeight: 500 }}>{a.name}</td>
                       <td style={{ color: "var(--text-secondary)" }}>{a.email || "-"}</td>
-                      <td style={{ color: "var(--text-secondary)", fontSize: 13 }}>
-                        {formatDate(a.checkedInAt)}
-                      </td>
+                      <td style={{ color: "var(--text-secondary)", fontSize: 13 }}>{formatDate(a.checkedInAt)}</td>
                       <td>
                         {a.isManual
                           ? <span className="badge badge-warning">Manuel</span>
@@ -530,10 +291,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                         }
                       </td>
                       <td>
-                        <button
-                          className="btn btn-danger btn-sm"
-                          onClick={() => removeAttendance(a.id)}
-                        >
+                        <button className="btn btn-danger btn-sm" onClick={() => removeAttendance(a.id)}>
                           Kaldır
                         </button>
                       </td>
