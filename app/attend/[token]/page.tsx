@@ -3,6 +3,7 @@
 import { useEffect, useState, use } from "react";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 
 // html5-qrcode client-only
 const QrScanner = dynamic(() => import("@/components/attend/QrScanner"), {
@@ -174,11 +175,9 @@ export default function AttendPage({ params }: { params: Promise<{ token: string
       <div style={{ maxWidth: 400, margin: "0 auto" }} className="fade-in-up">
 
         <div style={{ textAlign: "center", marginBottom: 32, marginTop: 24 }}>
-          <div style={{
-            width: 48, height: 48, background: "var(--accent-dim)", borderRadius: 12,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            margin: "0 auto 12px", fontSize: 20,
-          }}>📋</div>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 12 }}>
+            <Image src="/Logo.png" alt="Logo" width={56} height={56} style={{ objectFit: "contain" }} />
+          </div>
           <h1 style={{ fontSize: 22, fontWeight: 700 }}>Katılım Formu</h1>
           {event && (
             <p style={{ marginTop: 6, color: "var(--text-secondary)", fontSize: 14 }}>

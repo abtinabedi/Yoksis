@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 
 interface Attendance {
   id: string;
@@ -35,11 +36,9 @@ export default function ParticipantDashboard() {
       <div style={{ maxWidth: 600, margin: "0 auto" }}>
         
         <div style={{ textAlign: "center", marginBottom: 40 }}>
-          <div style={{
-            width: 56, height: 56, background: "rgba(79,122,255,0.1)", color: "var(--accent)",
-            borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
-            margin: "0 auto 16px", fontSize: 24
-          }}>👋</div>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+            <Image src="/Logo.png" alt="Logo" width={64} height={64} style={{ objectFit: "contain" }} />
+          </div>
           <h1 style={{ fontSize: 24, fontWeight: 700 }}>Hoş geldiniz, {user?.name || "Katılımcı"}!</h1>
           <p style={{ color: "var(--text-secondary)", marginTop: 8 }}>
             Yoklama ve katılım kayıtlarınız aşağıda listelenmektedir.

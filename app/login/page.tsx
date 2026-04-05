@@ -2,6 +2,7 @@
 
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 
 type Tab = "login" | "register";
 
@@ -90,16 +91,8 @@ function LoginContent() {
       <div style={{ width: "100%", maxWidth: "420px" }} className="fade-in-up">
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: "36px" }}>
-          <div style={{
-            width: 56, height: 56,
-            background: "var(--accent-dim)",
-            border: "1px solid rgba(79,122,255,0.3)",
-            borderRadius: 16,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            margin: "0 auto 16px",
-            fontSize: 24,
-          }}>
-            📋
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
+            <Image src="/Logo.png" alt="Logo" width={64} height={64} style={{ objectFit: "contain" }} />
           </div>
           <h1 style={{ fontSize: 28, fontWeight: 800 }} className="gradient-text">
             QR Yoklama

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import Image from "next/image";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: "🏠" },
@@ -27,13 +28,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             padding: "8px 0", marginBottom: 8,
           }}>
             <div style={{
-              width: 36, height: 36,
-              background: "var(--accent-dim)",
-              border: "1px solid rgba(79,122,255,0.3)",
-              borderRadius: 10,
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 18, flexShrink: 0,
-            }}>📋</div>
+              flexShrink: 0,
+            }}>
+              <Image src="/Logo.png" alt="Logo" width={36} height={36} style={{ objectFit: "contain" }} />
+            </div>
             <div>
               <div style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>
                 QR Yoklama
