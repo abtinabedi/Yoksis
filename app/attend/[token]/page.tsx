@@ -202,7 +202,7 @@ export default function AttendPage({ params }: { params: Promise<{ token: string
         {/* --- SCANNING --- */}
         {status === "scanning" && (
           <div className="card" style={{ padding: 0, overflow: "hidden" }}>
-            <QrScanner onResult={handleScan} />
+            <QrScanner onScan={handleScan} />
             <div style={{ padding: 16 }}>
               <button className="btn btn-secondary" style={{ width: "100%" }} onClick={() => setStatus("idle")}>
                 İptal Et
