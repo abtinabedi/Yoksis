@@ -1,0 +1,24 @@
+import { NextRequest, NextResponse } from "next/server";
+import { verifyToken } from "./lib/auth";
+
+export async function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Admin rotaları koru (/dashboard, /events, vs. — /login hariç)
+  if (pathname.startsWith("/dashboard") || pathname.startsWith("/events")) {
+    const token = request.cookies.get("auth_token")?.value;
+    if (!token) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+    const payload = await verifyToken(token);
+    if (!payload) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ["/dashboard/:path*", "/events/:path*"],
+};
