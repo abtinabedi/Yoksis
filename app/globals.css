@@ -379,6 +379,9 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   .sidebar { display: none; }
   .main-content { padding: 20px 16px; }
   .stat-grid { grid-template-columns: 1fr 1fr; }
+  .mobile-col { flex-direction: column !important; text-align: center !important; }
+  .mobile-padding { padding: 16px !important; }
+  .mobile-100 { flex-basis: 100% !important; min-width: 100% !important; }
 }
 
 /* Fix for datetime-local calendar icon in dark theme */

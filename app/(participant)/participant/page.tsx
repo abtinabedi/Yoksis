@@ -74,14 +74,14 @@ export default function ParticipantDashboard() {
             border: "1px solid rgba(79,122,255,0.2)",
             marginBottom: 32, padding: "32px 40px"
           }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 24, position: "relative", zIndex: 2 }}>
+            <div className="mobile-col" style={{ display: "flex", alignItems: "center", gap: 24, position: "relative", zIndex: 2 }}>
               <div style={{
                 width: 72, height: 72, background: "var(--bg-elevated)", color: "var(--accent)",
                 borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: 32, boxShadow: "0 8px 32px rgba(0,0,0,0.3)", border: "1px solid var(--border)"
               }}>👤</div>
               <div>
-                <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 4 }}>
+                <h1 style={{ fontSize: "clamp(20px, 5vw, 28px)", fontWeight: 800, marginBottom: 4 }}>
                   Hoş geldiniz, <span style={{ color: "var(--text-primary)" }}>{user?.name || "Katılımcı"}</span>
                 </h1>
                 <p style={{ color: "var(--text-secondary)", fontSize: 15, margin: 0 }}>
@@ -100,7 +100,7 @@ export default function ParticipantDashboard() {
           <div style={{ display: "flex", gap: 24, flexWrap: "wrap", alignItems: "flex-start" }}>
             
             {/* Left Column: Stats */}
-            <div style={{ flex: "1 1 250px", display: "flex", flexDirection: "column", gap: 16 }}>
+            <div className="mobile-100" style={{ flex: "1 1 250px", display: "flex", flexDirection: "column", gap: 16 }}>
               <div className="stat-card" style={{ margin: 0, padding: 24 }}>
                 <div className="stat-value gradient-text" style={{ fontSize: 40 }}>{attendances.length}</div>
                 <div className="stat-label" style={{ fontSize: 14 }}>Toplam Katıldığınız Etkinlik</div>
@@ -117,7 +117,7 @@ export default function ParticipantDashboard() {
             </div>
 
             {/* Right Column: Timeline / List */}
-            <div className="card" style={{ flex: "2 1 500px", padding: 32 }}>
+            <div className="card mobile-100 mobile-padding" style={{ flex: "2 1 400px", padding: 32 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
                 <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0 }}>Katılım Geçmişiniz</h2>
                 <div style={{ fontSize: 13, color: "var(--text-secondary)", background: "var(--bg)", padding: "6px 12px", borderRadius: 20 }}>
@@ -138,12 +138,12 @@ export default function ParticipantDashboard() {
               ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                   {attendances.map((a, i) => (
-                    <div key={a.id} style={{
+                    <div key={a.id} className="hover-lift mobile-col mobile-padding" style={{
                       padding: 20, background: "var(--bg)", border: "1px solid rgba(255,255,255,0.03)", 
                       borderRadius: "var(--radius)", display: "flex", gap: 20, alignItems: "center",
                       boxShadow: "0 4px 20px rgba(0,0,0,0.1)", transition: "transform 0.2s, background 0.2s",
                       cursor: "default"
-                    }} className="hover-lift">
+                    }}>
                       <div style={{
                         width: 48, height: 48, borderRadius: 12, flexShrink: 0,
                         background: "rgba(16,185,129,0.1)", color: "var(--success)",
