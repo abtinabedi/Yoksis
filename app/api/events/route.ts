@@ -39,8 +39,8 @@ export async function POST(request: NextRequest) {
       locationLat: locationLat || null,
       locationLng: locationLng || null,
       locationRadiusM: locationRadiusM || 200,
-      startsAt: new Date(startsAt),
-      endsAt: new Date(endsAt),
+      startsAt: new Date(startsAt + "+03:00"),
+      endsAt: new Date(endsAt + "+03:00"),
       qrSecret,
       createdBy: user.userId,
     })

@@ -42,6 +42,7 @@ function formatDate(d: string) {
   return new Date(d).toLocaleString("tr-TR", {
     day: "2-digit", month: "short", year: "numeric",
     hour: "2-digit", minute: "2-digit",
+    timeZone: "Europe/Istanbul",
   });
 }
 
@@ -59,6 +60,8 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   const [showQrUrl, setShowQrUrl] = useState(false);
   const [csvError, setCsvError] = useState("");
   const [csvLoading, setCsvLoading] = useState(false);
+  const [sheetUrl, setSheetUrl] = useState("");
+  const [showSheetInput, setShowSheetInput] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -115,6 +118,43 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     setAttendances((prev) => prev.filter((a) => a.id !== attendanceId));
   }
 
+  async function uploadParsedCsv(results: Papa.ParseResult<unknown>) {
+    const rows = results.data as Record<string, string>[];
+    const items = rows
+      .map((row) => {
+        const getVal = (possibleKeys: string[]) => {
+          const key = Object.keys(row).find(k => possibleKeys.some(pK => k.toLowerCase().includes(pK.toLowerCase())));
+          return key ? row[key] : null;
+        }
+        return {
+          name: getVal(["ad soyad", "adınız", "isim", "name"]) || "",
+          email: getVal(["email", "e-posta", "eposta", "e posta"]) || null,
+          phone: getVal(["telefon", "phone", "tel"]) || null,
+        }
+      })
+      .filter((r) => r.name.trim().length > 0);
+
+    if (items.length === 0) {
+      setCsvError("Geçerli kayıt bulunamadı. Lütfen listede 'Ad Soyad' sütunu olduğundan emin olun.");
+      setCsvLoading(false);
+      return;
+    }
+
+    const res = await fetch(`/api/events/${id}/participants`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(items),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setParticipants((prev) => [...prev, ...data]);
+      setCsvError("");
+    } else {
+      setCsvError(data.error || "Liste yüklenemedi.");
+    }
+    setCsvLoading(false);
+  }
+
   function handleCsvImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -124,41 +164,47 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
-      complete: async (results) => {
-        const rows = results.data as Record<string, string>[];
-        const items = rows
-          .map((row) => ({
-            name: row["Ad Soyad"] || row["ad soyad"] || row["name"] || row["isim"] || "",
-            email: row["Email"] || row["email"] || null,
-            phone: row["Telefon"] || row["phone"] || null,
-          }))
-          .filter((r) => r.name.trim().length > 0);
-
-        if (items.length === 0) {
-          setCsvError("CSV'de geçerli kayıt bulunamadı. 'Ad Soyad' sütunu zorunludur.");
-          setCsvLoading(false);
-          return;
-        }
-
-        const res = await fetch(`/api/events/${id}/participants`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(items),
-        });
-        const data = await res.json();
-        if (res.ok) {
-          setParticipants((prev) => [...prev, ...data]);
-        } else {
-          setCsvError(data.error || "CSV yüklenemedi.");
-        }
-        setCsvLoading(false);
-        e.target.value = "";
-      },
+      complete: uploadParsedCsv,
       error: () => {
         setCsvError("CSV dosyası okunamadı.");
         setCsvLoading(false);
       },
     });
+    e.target.value = "";
+  }
+
+  async function handleSheetImport() {
+    if (!sheetUrl) return;
+    setCsvError("");
+    setCsvLoading(true);
+    
+    const match = sheetUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+    if (!match) {
+      setCsvError("Geçersiz Google Sheets URL'i.");
+      setCsvLoading(false);
+      return;
+    }
+    
+    const sheetId = match[1];
+    const exportUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
+    
+    try {
+      const res = await fetch(exportUrl);
+      if (!res.ok) throw new Error("Dosya okunamadı. Bağlantı Ayarlarından 'Bağlantıya sahip olan herkes görüntüleyebilir/okuyabilir' izni verildiğinden emin olun.");
+      const csvText = await res.text();
+      
+      Papa.parse(csvText, {
+        header: true,
+        skipEmptyLines: true,
+        complete: uploadParsedCsv,
+        error: () => { setCsvError("Veri parse edilemedi."); setCsvLoading(false); }
+      });
+      setShowSheetInput(false);
+      setSheetUrl("");
+    } catch (e: any) {
+      setCsvError(e.message || "Google Sheets ile bağlantı kurulamadı.");
+      setCsvLoading(false);
+    }
   }
 
   async function clearParticipants() {
@@ -223,16 +269,35 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                 Listeyi Temizle
               </button>
             )}
+            <button className="btn btn-secondary btn-sm" onClick={() => setShowSheetInput(!showSheetInput)}>
+              🔗 Google Sheets / Forms
+            </button>
             <label className={`btn btn-${participants.length > 0 ? "secondary" : "primary"} btn-sm`} style={{ cursor: "pointer" }}>
               {csvLoading ? "Yükleniyor..." : participants.length > 0 ? "CSV Güncelle" : "CSV Yükle"}
               <input type="file" accept=".csv" style={{ display: "none" }} onChange={handleCsvImport} disabled={csvLoading} />
             </label>
           </div>
         </div>
+        
+        {showSheetInput && (
+          <div style={{ marginTop: 16, display: "flex", gap: 8, padding: 12, background: "var(--bg)", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)" }}>
+            <input 
+              type="text" 
+              style={{ flex: 1, padding: "8px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", fontSize: 13, background: "var(--bg-elevated)", color: "var(--text-primary)", outline: "none" }}
+              placeholder="Google E-Tablo paylaşım URL'ini yapıştırın..." 
+              value={sheetUrl}
+              onChange={e => setSheetUrl(e.target.value)}
+            />
+            <button className="btn btn-primary btn-sm" onClick={handleSheetImport} disabled={csvLoading || !sheetUrl}>
+              Ekle
+            </button>
+          </div>
+        )}
+
         {csvError && <div className="alert alert-danger" style={{ marginTop: 10, fontSize: 13 }}>⚠️ {csvError}</div>}
-        {participants.length === 0 && (
+        {participants.length === 0 && !showSheetInput && (
           <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 10 }}>
-            CSV sütun başlıkları: <strong>Ad Soyad</strong>, Email (opsiyonel), Telefon (opsiyonel)
+            CSV / Google Sheets sütun başlıkları: <strong>Ad Soyad</strong> (Zorunlu), Email (opsiyonel), Telefon (opsiyonel)
           </p>
         )}
       </div>

@@ -16,6 +16,7 @@ function formatDate(d: string) {
   return new Date(d).toLocaleString("tr-TR", {
     day: "2-digit", month: "short", year: "numeric",
     hour: "2-digit", minute: "2-digit",
+    timeZone: "Europe/Istanbul"
   });
 }
 
