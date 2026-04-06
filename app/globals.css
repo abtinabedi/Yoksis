@@ -380,3 +380,14 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   .main-content { padding: 20px 16px; }
   .stat-grid { grid-template-columns: 1fr 1fr; }
 }
+
+/* Fix for datetime-local calendar icon in dark theme */
+input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
