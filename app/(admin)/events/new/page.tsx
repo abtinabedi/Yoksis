@@ -111,7 +111,7 @@ export default function NewEventPage() {
             />
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+          <div className="mobile-grid-1" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
             <div className="form-field">
               <label>Başlangıç Tarihi & Saati *</label>
               <input
@@ -171,7 +171,7 @@ export default function NewEventPage() {
                   {gettingLocation ? "Konum alınıyor..." : "📍 Mevcut Konumumu Kullan"}
                 </button>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                <div className="mobile-grid-1" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
                   <div className="form-field">
                     <label>Enlem</label>
                     <input

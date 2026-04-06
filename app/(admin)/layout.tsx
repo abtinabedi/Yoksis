@@ -63,7 +63,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </aside>
 
       {/* Main */}
-      <main className="main-content">{children}</main>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+        {/* Mobile Nav */}
+        <div className="mobile-nav">
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <Image src="/Logo.png" alt="Logo" width={32} height={32} style={{ objectFit: "contain" }} />
+            <span style={{ fontSize: 15, fontWeight: 700 }}>QR Yoklama</span>
+          </div>
+          <div className="mobile-nav-menu">
+            <Link href="/dashboard" className="btn btn-secondary btn-sm" style={{ padding: "0 10px" }}>🏠</Link>
+            <Link href="/events/new" className="btn btn-primary btn-sm" style={{ padding: "0 10px" }}>➕</Link>
+            <button onClick={handleLogout} className="btn btn-danger btn-sm" style={{ padding: "0 10px" }}>🚪</button>
+          </div>
+        </div>
+
+        <main className="main-content">{children}</main>
+      </div>
     </div>
   );
 }

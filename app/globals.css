@@ -374,14 +374,21 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   margin: 8px 0;
 }
 
+.mobile-nav { display: none; }
+.mobile-nav-menu { display: flex; gap: 12px; }
+
 /* Responsive */
 @media (max-width: 768px) {
+  .mobile-nav { display: flex !important; align-items: center; justify-content: space-between; padding: 12px 16px; background: var(--bg-card); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 50; }
   .sidebar { display: none; }
   .main-content { padding: 20px 16px; }
   .stat-grid { grid-template-columns: 1fr 1fr; }
-  .mobile-col { flex-direction: column !important; text-align: center !important; }
+  .mobile-grid-1 { grid-template-columns: 1fr !important; }
+  .mobile-col { flex-direction: column !important; text-align: left !important; align-items: stretch !important; }
+  .mobile-row { flex-direction: column !important; gap: 12px !important; }
   .mobile-padding { padding: 16px !important; }
-  .mobile-100 { flex-basis: 100% !important; min-width: 100% !important; }
+  .mobile-100 { flex-basis: 100% !important; min-width: 100% !important; width: 100% !important; }
+  .mobile-btn-group { flex-direction: column; width: 100%; }
 }
 
 /* Fix for datetime-local calendar icon in dark theme */

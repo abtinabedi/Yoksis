@@ -93,7 +93,7 @@ export default function DashboardPage() {
             const isUpcoming = new Date(event.startsAt) > now;
             const isPast = new Date(event.endsAt) < now;
             return (
-              <div key={event.id} className="card" style={{
+              <div key={event.id} className="card mobile-col mobile-padding" style={{
                 display: "flex", alignItems: "center", justifyContent: "space-between",
                 gap: 16, flexWrap: "wrap",
                 borderLeft: isActive ? "3px solid var(--success)" : isPast ? "3px solid var(--text-muted)" : "3px solid var(--accent)",
@@ -115,15 +115,15 @@ export default function DashboardPage() {
                   </p>
                 </div>
 
-                <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                <div className="mobile-btn-group" style={{ display: "flex", gap: 8, flexShrink: 0 }}>
                   <Link href={`/events/${event.id}`}>
-                    <button className="btn btn-secondary btn-sm">Yönet</button>
+                    <button className="btn btn-secondary btn-sm mobile-100">Yönet</button>
                   </Link>
                   <Link href={`/events/${event.id}`} target="_blank">
-                    <button className="btn btn-secondary btn-sm" title="QR Ekranı">📲</button>
+                    <button className="btn btn-secondary btn-sm mobile-100" title="QR Ekranı">📲 QR Ekranı</button>
                   </Link>
                   <button
-                    className="btn btn-danger btn-sm"
+                    className="btn btn-danger btn-sm mobile-100"
                     onClick={() => deleteEvent(event.id)}
                     title="Sil"
                   >
