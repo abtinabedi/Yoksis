@@ -62,6 +62,10 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   const [csvLoading, setCsvLoading] = useState(false);
   const [sheetUrl, setSheetUrl] = useState("");
   const [showSheetInput, setShowSheetInput] = useState(false);
+  const [showManualInput, setShowManualInput] = useState(false);
+  const [manualName, setManualName] = useState("");
+  const [manualEmail, setManualEmail] = useState("");
+  const [manualPhone, setManualPhone] = useState("");
 
   useEffect(() => {
     Promise.all([
@@ -206,6 +210,46 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     }
   }
 
+  async function handleManualImport() {
+    if (!manualName.trim()) {
+      setCsvError("Lütfen Ad Soyad giriniz.");
+      return;
+    }
+    setCsvError("");
+    setCsvLoading(true);
+
+    const items = [
+      {
+        name: manualName.trim(),
+        email: manualEmail.trim() || null,
+        phone: manualPhone.trim() || null,
+      }
+    ];
+
+    try {
+      const res = await fetch(`/api/events/${id}/participants`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(items),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setParticipants((prev) => [...prev, ...data]);
+        setManualName("");
+        setManualEmail("");
+        setManualPhone("");
+        setShowManualInput(false);
+        setCsvError("");
+      } else {
+        setCsvError(data.error || "Katılımcı eklenemedi.");
+      }
+    } catch {
+      setCsvError("Sunucu hatası.");
+    } finally {
+      setCsvLoading(false);
+    }
+  }
+
   async function clearParticipants() {
     if (!confirm("Tüm katılımcı listesini silmek istiyor musunuz?")) return;
     await fetch(`/api/events/${id}/participants`, {
@@ -268,7 +312,10 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                 Listeyi Temizle
               </button>
             )}
-            <button className="btn btn-secondary btn-sm" onClick={() => setShowSheetInput(!showSheetInput)}>
+            <button className="btn btn-secondary btn-sm" onClick={() => { setShowManualInput(!showManualInput); setShowSheetInput(false); }}>
+              Manuel Ekle
+            </button>
+            <button className="btn btn-secondary btn-sm" onClick={() => { setShowSheetInput(!showSheetInput); setShowManualInput(false); }}>
               Google Sheets / Forms
             </button>
             <label className={`btn btn-${participants.length > 0 ? "secondary" : "primary"} btn-sm`} style={{ cursor: "pointer" }}>
@@ -293,8 +340,37 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
           </div>
         )}
 
+        {showManualInput && (
+          <div style={{ marginTop: 16, display: "flex", flexWrap: "wrap", gap: 8, padding: 12, background: "var(--bg)", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)" }}>
+            <input 
+              type="text" 
+              style={{ flex: 1, minWidth: 150, padding: "8px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", fontSize: 13, background: "var(--bg-elevated)", color: "var(--text-primary)", outline: "none" }}
+              placeholder="Ad Soyad (Zorunlu)" 
+              value={manualName}
+              onChange={e => setManualName(e.target.value)}
+            />
+            <input 
+              type="text" 
+              style={{ flex: 1, minWidth: 150, padding: "8px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", fontSize: 13, background: "var(--bg-elevated)", color: "var(--text-primary)", outline: "none" }}
+              placeholder="E-posta (Opsiyonel)" 
+              value={manualEmail}
+              onChange={e => setManualEmail(e.target.value)}
+            />
+            <input 
+              type="text" 
+              style={{ flex: 1, minWidth: 150, padding: "8px 12px", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", fontSize: 13, background: "var(--bg-elevated)", color: "var(--text-primary)", outline: "none" }}
+              placeholder="Telefon (Opsiyonel)" 
+              value={manualPhone}
+              onChange={e => setManualPhone(e.target.value)}
+            />
+            <button className="btn btn-primary btn-sm" onClick={handleManualImport} disabled={csvLoading || !manualName.trim()}>
+              Kaydet
+            </button>
+          </div>
+        )}
+
         {csvError && <div className="alert alert-danger" style={{ marginTop: 10, fontSize: 13 }}>{csvError}</div>}
-        {participants.length === 0 && !showSheetInput && (
+        {participants.length === 0 && !showSheetInput && !showManualInput && (
           <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 10 }}>
             CSV / Google Sheets sütun başlıkları: <strong>Ad Soyad</strong> (Zorunlu), Email (opsiyonel), Telefon (opsiyonel)
           </p>

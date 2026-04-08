@@ -52,6 +52,8 @@ export default function AttendPage({ params }: { params: Promise<{ token: string
   const [scannedEventId, setScannedEventId] = useState(eventId);
   const [submitting, setSubmitting] = useState(false);
   const [deviceId, setDeviceId] = useState("");
+  const [guestName, setGuestName] = useState("");
+  const [guestContact, setGuestContact] = useState("");
 
   // Oturumu getir
   useEffect(() => {
@@ -88,10 +90,10 @@ export default function AttendPage({ params }: { params: Promise<{ token: string
 
   // QR token direkt URL'den geliyorsa ready durumuna geç
   useEffect(() => {
-    if (qrToken && eventId && session) {
+    if (qrToken && eventId && !sessionLoading) {
       setStatus("ready");
     }
-  }, [qrToken, eventId, session]);
+  }, [qrToken, eventId, sessionLoading]);
 
   function handleScan(result: string) {
     try {
@@ -109,7 +111,11 @@ export default function AttendPage({ params }: { params: Promise<{ token: string
   }
 
   async function handleConfirmCheckIn() {
-    if (!session) return;
+    if (!session && (!guestName || !guestContact)) {
+      setErrorMsg("Lütfen Ad Soyad ve İletişim Bilgisi alanlarını doldurun.");
+      setStatus("error");
+      return;
+    }
     setStatus("locating");
     setSubmitting(true);
     setErrorMsg("");
@@ -143,8 +149,8 @@ export default function AttendPage({ params }: { params: Promise<{ token: string
           token: scannedToken,
           lat: lat,
           lng: lng,
-          name: session.name,     // Hesaptaki ismi otomatik alıyoruz
-          email: session.email,   // Hesaptaki maili otomatik alıyoruz
+          name: session ? session.name : guestName,
+          email: session ? session.email : guestContact,
           phone: null,
           deviceId: deviceId || null,
         }),
@@ -213,18 +219,51 @@ export default function AttendPage({ params }: { params: Promise<{ token: string
         {/* --- READY --- */}
         {(status === "ready" || status === "locating" || status === "submitting") && (
           <div className="card" style={{ textAlign: "center" }}>
-            <div style={{
-              width: 56, height: 56, background: "rgba(16,185,129,0.1)", color: "var(--success)",
-              borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
-              margin: "0 auto 16px", fontSize: 24
-            }}></div>
-            <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>
-              Hoş geldiniz, {session?.name}!
-            </h2>
-            <p style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 24 }}>
-              Hesabınızla eşleşme yapıldı.
-              Katılımınızı onaylamak için aşağıdaki butona basın.
-            </p>
+            {session ? (
+              <>
+                <div style={{
+                  width: 56, height: 56, background: "rgba(16,185,129,0.1)", color: "var(--success)",
+                  borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
+                  margin: "0 auto 16px", fontSize: 24
+                }}></div>
+                <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>
+                  Hoş geldiniz, {session.name}!
+                </h2>
+                <p style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 24 }}>
+                  Hesabınızla eşleşme yapıldı.
+                  Katılımınızı onaylamak için aşağıdaki butona basın.
+                </p>
+              </>
+            ) : (
+              <div style={{ textAlign: "left", marginBottom: 24 }}>
+                <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8, textAlign: "center" }}>
+                  Misafir Girişi
+                </h2>
+                <p style={{ fontSize: 14, color: "var(--text-secondary)", marginBottom: 16, textAlign: "center" }}>
+                  Sistemde kayıtlı değilseniz, yoklama verebilmek için lütfen bilgilerinizi giriniz.
+                </p>
+                <div className="form-field" style={{ marginBottom: 12 }}>
+                  <label>Ad Soyad *</label>
+                  <input
+                    type="text"
+                    value={guestName}
+                    onChange={(e) => setGuestName(e.target.value)}
+                    placeholder="Adınız ve Soyadınız"
+                    disabled={submitting || status === "locating"}
+                  />
+                </div>
+                <div className="form-field">
+                  <label>İletişim Bilgisi (E-posta veya Telefon) *</label>
+                  <input
+                    type="text"
+                    value={guestContact}
+                    onChange={(e) => setGuestContact(e.target.value)}
+                    placeholder="ornek@email.com veya 5XXXXXXXXX"
+                    disabled={submitting || status === "locating"}
+                  />
+                </div>
+              </div>
+            )}
 
             <button
               className="btn btn-primary"
