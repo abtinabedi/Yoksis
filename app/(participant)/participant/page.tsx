@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import dynamic from "next/dynamic";
+
+const QrScanner = dynamic(() => import("@/components/attend/QrScanner"), { ssr: false });
 
 interface Attendance {
   id: string;
@@ -16,6 +19,7 @@ export default function ParticipantDashboard() {
   const [attendances, setAttendances] = useState<Attendance[]>([]);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<{name: string, email: string} | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -47,7 +51,7 @@ export default function ParticipantDashboard() {
         borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
         padding: "16px 24px",
       }}>
-        <div style={{ maxWidth: 900, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ padding: "0 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <Image src="/Logo.png" alt="Logo" width={40} height={40} style={{ objectFit: "contain" }} />
             <h1 style={{ fontSize: 18, fontWeight: 700, margin: 0 }} className="gradient-text">QR Yoklama</h1>
@@ -58,14 +62,14 @@ export default function ParticipantDashboard() {
             onClick={handleLogout}
             style={{ display: "flex", alignItems: "center", gap: 8, background: "rgba(255,60,60,0.1)", color: "var(--danger)", border: "none" }}
           >
-            <span>🚪</span> Çıkış Yap
+            Çıkış Yap
           </button>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="fade-in-up" style={{ padding: "40px 20px", flex: 1 }}>
-        <div style={{ maxWidth: 900, margin: "0 auto" }}>
+        <div>
           
           {/* Welcome Banner */}
           <div className="card" style={{ 
@@ -79,7 +83,7 @@ export default function ParticipantDashboard() {
                 width: 72, height: 72, background: "var(--bg-elevated)", color: "var(--accent)",
                 borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: 32, boxShadow: "0 8px 32px rgba(0,0,0,0.3)", border: "1px solid var(--border)"
-              }}>👤</div>
+              }}></div>
               <div>
                 <h1 style={{ fontSize: "clamp(20px, 5vw, 28px)", fontWeight: 800, marginBottom: 4 }}>
                   Hoş geldiniz, <span style={{ color: "var(--text-primary)" }}>{user?.name || "Katılımcı"}</span>
@@ -101,6 +105,25 @@ export default function ParticipantDashboard() {
             
             {/* Left Column: Stats */}
             <div className="mobile-100" style={{ flex: "1 1 250px", display: "flex", flexDirection: "column", gap: 16 }}>
+              <div className="card" style={{ padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
+                <button
+                  className="btn btn-primary"
+                  style={{ width: "100%", height: 48, fontSize: 16 }}
+                  onClick={() => setIsScanning(!isScanning)}
+                >
+                  Yoklamaya Katıl
+                </button>
+                {isScanning && (
+                   <div style={{ borderRadius: "var(--radius)", overflow: "hidden" }}>
+                     <QrScanner onScan={(result) => {
+                       setIsScanning(false);
+                       window.location.href = result;
+                     }} />
+                     <button className="btn btn-secondary" style={{ width: "100%", marginTop: 12 }} onClick={() => setIsScanning(false)}>İptal</button>
+                   </div>
+                )}
+              </div>
+
               <div className="stat-card" style={{ margin: 0, padding: 24 }}>
                 <div className="stat-value gradient-text" style={{ fontSize: 40 }}>{attendances.length}</div>
                 <div className="stat-label" style={{ fontSize: 14 }}>Toplam Katıldığınız Etkinlik</div>
@@ -129,7 +152,6 @@ export default function ParticipantDashboard() {
                 <div style={{ color: "var(--text-muted)", textAlign: "center", padding: 40 }}>Geçmişiniz yükleniyor...</div>
               ) : attendances.length === 0 ? (
                 <div style={{ textAlign: "center", padding: "60px 20px", background: "var(--bg)", borderRadius: "var(--radius)", border: "1px dashed var(--border)" }}>
-                  <div style={{ fontSize: 48, marginBottom: 16 }}>📭</div>
                   <h3 style={{ fontSize: 16, fontWeight: 600, color: "var(--text-primary)", marginBottom: 8 }}>Henüz hiçbir kaydınız yok</h3>
                   <p style={{ color: "var(--text-muted)", fontSize: 14, maxWidth: 300, margin: "0 auto" }}>
                     Bir etkinliğe katıldığınızda ve QR kodu okuttuğunuzda kayıtlarınız burada görünecektir.
@@ -147,15 +169,15 @@ export default function ParticipantDashboard() {
                       <div style={{
                         width: 48, height: 48, borderRadius: 12, flexShrink: 0,
                         background: "rgba(16,185,129,0.1)", color: "var(--success)",
-                        display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20
+                        display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: "bold"
                       }}>
-                        ✓
+                        Var
                       </div>
                       <div style={{ flex: 1 }}>
                         <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 4, letterSpacing: "-0.01em" }}>{a.eventName}</h3>
                         <p style={{ fontSize: 13, color: "var(--text-muted)", margin: 0, display: "flex", gap: 12, alignItems: "center" }}>
-                          <span>📅 {new Date(a.checkedInAt).toLocaleDateString("tr-TR", { day: "2-digit", month: "long", year: "numeric", timeZone: "Europe/Istanbul" })}</span>
-                          <span>🕒 {new Date(a.checkedInAt).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Istanbul" })}</span>
+                          <span>{new Date(a.checkedInAt).toLocaleDateString("tr-TR", { day: "2-digit", month: "long", year: "numeric", timeZone: "Europe/Istanbul" })}</span>
+                          <span>{new Date(a.checkedInAt).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Istanbul" })}</span>
                         </p>
                       </div>
                       {i === 0 && (

@@ -234,7 +234,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
 
 .sidebar {
   width: 240px;
-  min-height: 100vh;
+  height: 100vh;
   background: var(--bg-card);
   border-right: 1px solid var(--border);
   display: flex;
@@ -244,6 +244,7 @@ tr:hover td { background: rgba(255,255,255,0.02); }
   position: sticky;
   top: 0;
   flex-shrink: 0;
+  overflow-y: auto;
 }
 
 .main-content {
