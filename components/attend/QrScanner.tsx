@@ -23,7 +23,7 @@ export default function QrScanner({ onScan }: Props) {
         (result) => {
           if (!scannedRef.current) {
             scannedRef.current = true;
-            scanner.stop().catch(() => {});
+            // scanner.stop().catch(() => {});
             onScan(result);
           }
         },

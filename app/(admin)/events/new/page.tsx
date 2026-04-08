@@ -143,7 +143,7 @@ export default function NewEventPage() {
           }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: useLocation ? 16 : 0 }}>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 600 }}>📍 Konum Doğrulaması</div>
+                <div style={{ fontSize: 14, fontWeight: 600 }}>Konum Doğrulaması</div>
                 <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
                   Katılımcıların etkinlik alanında olup olmadığını doğrula
                 </div>
@@ -168,7 +168,7 @@ export default function NewEventPage() {
                   disabled={gettingLocation}
                   style={{ alignSelf: "flex-start" }}
                 >
-                  {gettingLocation ? "Konum alınıyor..." : "📍 Mevcut Konumumu Kullan"}
+                  {gettingLocation ? "Konum alınıyor..." : "Mevcut Konumumu Kullan"}
                 </button>
 
                 <div className="mobile-grid-1" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
@@ -209,7 +209,7 @@ export default function NewEventPage() {
 
           {error && (
             <div className="alert alert-danger">
-              <span>⚠️</span> {error}
+              {error}
             </div>
           )}
 

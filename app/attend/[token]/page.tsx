@@ -193,7 +193,7 @@ export default function AttendPage({ params }: { params: Promise<{ token: string
               Katılım kaydınızı oluşturmak için telefon kameranızla etkinlik QR kodunu okutun veya cihazınızın kamerasını açın.
             </p>
             <button className="btn btn-primary" style={{ width: "100%" }} onClick={() => setStatus("scanning")}>
-              📷 Kamerayı Aç
+              Kamerayı Aç
             </button>
           </div>
         )}
@@ -217,7 +217,7 @@ export default function AttendPage({ params }: { params: Promise<{ token: string
               width: 56, height: 56, background: "rgba(16,185,129,0.1)", color: "var(--success)",
               borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
               margin: "0 auto 16px", fontSize: 24
-            }}>👤</div>
+            }}></div>
             <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>
               Hoş geldiniz, {session?.name}!
             </h2>
@@ -232,9 +232,9 @@ export default function AttendPage({ params }: { params: Promise<{ token: string
               onClick={handleConfirmCheckIn}
               disabled={submitting}
             >
-              {status === "locating" ? "📍 Konum Doğrulanıyor..." :
-               status === "submitting" ? "⏳ Kaydediliyor..." :
-               "✓ Çek-in Yap"}
+              {status === "locating" ? "Konum Doğrulanıyor..." :
+               status === "submitting" ? "Kaydediliyor..." :
+               "Çek-in Yap"}
             </button>
           </div>
         )}
@@ -242,7 +242,7 @@ export default function AttendPage({ params }: { params: Promise<{ token: string
         {/* --- ERROR --- */}
         {status === "error" && (
           <div className="card" style={{ textAlign: "center" }}>
-            <div style={{ fontSize: 40, marginBottom: 12 }}>❌</div>
+
             <h2 style={{ fontSize: 18, fontWeight: 600, color: "var(--danger)", marginBottom: 8 }}>
               İşlem Başarısız
             </h2>
@@ -262,7 +262,7 @@ export default function AttendPage({ params }: { params: Promise<{ token: string
         {/* --- SUCCESS --- */}
         {status === "success" && (
           <div className="card" style={{ textAlign: "center", background: "rgba(16, 185, 129, 0.05)" }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
+
             <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--success)", marginBottom: 8 }}>
               Başarılı!
             </h2>

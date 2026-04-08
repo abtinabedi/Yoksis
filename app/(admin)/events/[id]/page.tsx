@@ -76,14 +76,13 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     });
   }, [id]);
 
-  // Yoklama real-time yenile (sekmedeyken her 15sn)
+  // Yoklama real-time yenile
   useEffect(() => {
-    if (tab !== "attendance") return;
     const interval = setInterval(() => {
       fetch(`/api/events/${id}/attendance`).then((r) => r.json()).then(setAttendances);
-    }, 15000);
+    }, 2000);
     return () => clearInterval(interval);
-  }, [tab, id]);
+  }, [id]);
 
   const refreshQr = useCallback(() => {
     fetch(`/api/events/${id}/qr`)
@@ -241,14 +240,14 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
           <Link href="/dashboard" style={{ color: "var(--text-muted)", fontSize: 13 }}>← Dashboard</Link>
           <h1 className="page-title" style={{ marginTop: 4 }}>{event.title}</h1>
           <p className="page-subtitle">
-            📅 {formatDate(event.startsAt)} — {formatDate(event.endsAt)}
+            {formatDate(event.startsAt)} — {formatDate(event.endsAt)}
             {event.locationLat && (
-              <span style={{ marginLeft: 12 }}>📍 Konum aktif ({event.locationRadiusM}m)</span>
+              <span style={{ marginLeft: 12 }}>Konum aktif ({event.locationRadiusM}m)</span>
             )}
           </p>
         </div>
         <a href={`/attend/${id}`} target="_blank" className="btn btn-secondary">
-          🔗 Katılım Linki
+          Katılım Linki
         </a>
       </div>
 
@@ -270,7 +269,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
               </button>
             )}
             <button className="btn btn-secondary btn-sm" onClick={() => setShowSheetInput(!showSheetInput)}>
-              🔗 Google Sheets / Forms
+              Google Sheets / Forms
             </button>
             <label className={`btn btn-${participants.length > 0 ? "secondary" : "primary"} btn-sm`} style={{ cursor: "pointer" }}>
               {csvLoading ? "Yükleniyor..." : participants.length > 0 ? "CSV Güncelle" : "CSV Yükle"}
@@ -294,7 +293,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
           </div>
         )}
 
-        {csvError && <div className="alert alert-danger" style={{ marginTop: 10, fontSize: 13 }}>⚠️ {csvError}</div>}
+        {csvError && <div className="alert alert-danger" style={{ marginTop: 10, fontSize: 13 }}>{csvError}</div>}
         {participants.length === 0 && !showSheetInput && (
           <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 10 }}>
             CSV / Google Sheets sütun başlıkları: <strong>Ad Soyad</strong> (Zorunlu), Email (opsiyonel), Telefon (opsiyonel)
@@ -323,8 +322,8 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
               boxShadow: tab === t ? "0 0 16px var(--accent-glow)" : "none",
             }}
           >
-            {t === "qr" && "📲 QR Kod"}
-            {t === "attendance" && `✅ Yoklama${participants.length > 0 ? ` (${presentCount}/${participants.length})` : ` (${attendances.length})`}`}
+            {t === "qr" && "QR Kod"}
+            {t === "attendance" && `Yoklama${participants.length > 0 ? ` (${presentCount}/${participants.length})` : ` (${attendances.length})`}`}
           </button>
         ))}
       </div>
@@ -392,17 +391,12 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
             <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Nasıl Çalışır?</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {[
-                { icon: "📂", title: "Listeyi Yükle", desc: "Etkinlikten önce CSV ile katılımcı listesi yükleyin" },
-                { icon: "📱", title: "QR Okut", desc: "Katılımcılar telefon kamerasıyla QR kodu okutup adlarını yazar" },
-                { icon: "🔍", title: "Otomatik Eşleştirme", desc: "Sistem adı listede arar ve Var/Yok durumunu işaretler" },
-                { icon: "🔄", title: "Her dakika yenilenir", desc: "Güvenlik için QR kod 60 saniyede bir değişir" },
+                { title: "Listeyi Yükle", desc: "Etkinlikten önce CSV ile katılımcı listesi yükleyin" },
+                { title: "QR Okut", desc: "Katılımcılar telefon kamerasıyla QR kodu okutup adlarını yazar" },
+                { title: "Otomatik Eşleştirme", desc: "Sistem adı listede arar ve Var/Yok durumunu işaretler" },
+                { title: "Her dakika yenilenir", desc: "Güvenlik için QR kod 60 saniyede bir değişir" },
               ].map((item, i) => (
                 <div key={i} style={{ display: "flex", gap: 12 }}>
-                  <div style={{
-                    width: 36, height: 36, flexShrink: 0,
-                    background: "var(--bg-elevated)", borderRadius: 10,
-                    display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18,
-                  }}>{item.icon}</div>
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 600 }}>{item.title}</div>
                     <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 2 }}>{item.desc}</div>
@@ -444,7 +438,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
             <a href={`/api/events/${id}/export`} className="btn btn-success btn-sm">
-              📊 Excel İndir
+              Excel İndir
             </a>
           </div>
 
@@ -472,8 +466,8 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                         <td style={{ color: "var(--text-secondary)", fontSize: 13 }}>{p.email || "-"}</td>
                         <td>
                           {att
-                            ? <span className="badge badge-success">✓ Var</span>
-                            : <span className="badge badge-danger">✗ Yok</span>
+                            ? <span className="badge badge-success">Var</span>
+                            : <span className="badge badge-danger">Yok</span>
                           }
                         </td>
                         <td style={{ color: "var(--text-secondary)", fontSize: 13 }}>

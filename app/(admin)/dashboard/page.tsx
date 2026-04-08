@@ -78,7 +78,7 @@ export default function DashboardPage() {
         </div>
       ) : events.length === 0 ? (
         <div className="card" style={{ textAlign: "center", padding: "60px 24px" }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>📭</div>
+
           <p style={{ color: "var(--text-secondary)", marginBottom: 20 }}>
             Henüz etkinlik oluşturulmadı.
           </p>
@@ -101,8 +101,8 @@ export default function DashboardPage() {
                 <div style={{ flex: 1, minWidth: 200 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
                     <h3 style={{ fontSize: 16, fontWeight: 600 }}>{event.title}</h3>
-                    {isActive && <span className="badge badge-success">🟢 Aktif</span>}
-                    {isUpcoming && <span className="badge badge-info">🔵 Yaklaşan</span>}
+                    {isActive && <span className="badge badge-success">Aktif</span>}
+                    {isUpcoming && <span className="badge badge-info">Yaklaşan</span>}
                     {isPast && <span className="badge" style={{ background: "var(--bg-elevated)", color: "var(--text-muted)" }}>Bitti</span>}
                   </div>
                   {event.description && (
@@ -111,23 +111,20 @@ export default function DashboardPage() {
                     </p>
                   )}
                   <p style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                    📅 {formatDate(event.startsAt)} → {formatDate(event.endsAt)}
+                    {formatDate(event.startsAt)} → {formatDate(event.endsAt)}
                   </p>
                 </div>
 
                 <div className="mobile-btn-group" style={{ display: "flex", gap: 8, flexShrink: 0 }}>
                   <Link href={`/events/${event.id}`}>
-                    <button className="btn btn-secondary btn-sm mobile-100">Yönet</button>
-                  </Link>
-                  <Link href={`/events/${event.id}`} target="_blank">
-                    <button className="btn btn-secondary btn-sm mobile-100" title="QR Ekranı">📲 QR Ekranı</button>
+                    <button className="btn btn-secondary btn-sm mobile-100" title="QR Ekranı">QR Ekranı</button>
                   </Link>
                   <button
                     className="btn btn-danger btn-sm mobile-100"
                     onClick={() => deleteEvent(event.id)}
-                    title="Sil"
+                    title="Kaldır"
                   >
-                    🗑
+                    Kaldır
                   </button>
                 </div>
               </div>

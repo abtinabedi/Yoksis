@@ -5,8 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: "🏠" },
-  { href: "/events/new", label: "Yeni Etkinlik", icon: "➕" },
+  { href: "/dashboard", label: "Dashboard", icon: "" },
+  { href: "/events/new", label: "Yeni Etkinlik", icon: "" },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -57,7 +57,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div>
           <div className="divider" style={{ marginBottom: 8 }} />
           <button className="nav-item" onClick={handleLogout} style={{ color: "var(--danger)" }}>
-            <span>🚪</span> Çıkış Yap
+             Çıkış Yap
           </button>
         </div>
       </aside>
@@ -71,9 +71,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <span style={{ fontSize: 15, fontWeight: 700 }}>QR Yoklama</span>
           </div>
           <div className="mobile-nav-menu">
-            <Link href="/dashboard" className="btn btn-secondary btn-sm" style={{ padding: "0 10px" }}>🏠</Link>
-            <Link href="/events/new" className="btn btn-primary btn-sm" style={{ padding: "0 10px" }}>➕</Link>
-            <button onClick={handleLogout} className="btn btn-danger btn-sm" style={{ padding: "0 10px" }}>🚪</button>
+            <Link href="/dashboard" className="btn btn-secondary btn-sm" style={{ padding: "0 10px" }}>Dashboard</Link>
+            <Link href="/events/new" className="btn btn-primary btn-sm" style={{ padding: "0 10px" }}>Yeni</Link>
+            <button onClick={handleLogout} className="btn btn-danger btn-sm" style={{ padding: "0 10px" }}>Çıkış</button>
           </div>
         </div>
 
