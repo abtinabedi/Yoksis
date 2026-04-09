@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { attendances, participants } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { verifyToken } from "@/lib/auth";
 
 export async function GET(
@@ -29,7 +29,20 @@ export async function POST(
   }
 
   const { id } = await params;
-  const { participantId } = await request.json();
+  const { participantId, status = "present", reason = null } = await request.json();
+
+  const [existingRecord] = await db
+    .select()
+    .from(attendances)
+    .where(and(eq(attendances.eventId, id), eq(attendances.participantId, participantId)));
+
+  if (existingRecord) {
+    const [record] = await db.update(attendances)
+      .set({ status, manualReason: reason, isManual: true })
+      .where(eq(attendances.id, existingRecord.id))
+      .returning();
+    return NextResponse.json(record, { status: 200 });
+  }
 
   const [participant] = await db
     .select()
@@ -50,6 +63,8 @@ export async function POST(
       phone: participant.phone,
       isRegistered: true,
       isManual: true,
+      status,
+      manualReason: reason,
     })
     .returning();
 

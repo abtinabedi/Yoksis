@@ -44,5 +44,7 @@ export const attendances = pgTable("attendances", {
   lng: real("lng"),
   isRegistered: boolean("is_registered").default(false),
   isManual: boolean("is_manual").default(false),
+  status: text("status").default("present").notNull(),
+  manualReason: text("manual_reason"),
   deviceId: text("device_id"),
 });

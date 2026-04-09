@@ -54,6 +54,7 @@ export default function AttendPage({ params }: { params: Promise<{ token: string
   const [deviceId, setDeviceId] = useState("");
   const [guestName, setGuestName] = useState("");
   const [guestContact, setGuestContact] = useState("");
+  const [attendMessage, setAttendMessage] = useState<string | null>(null);
 
   // Oturumu getir
   useEffect(() => {
@@ -82,7 +83,19 @@ export default function AttendPage({ params }: { params: Promise<{ token: string
       fetch(`/api/events/${eventId}`)
         .then((r) => r.json())
         .then((data) => {
-          if (data.id) setEvent(data);
+          if (data.id) {
+            setEvent(data);
+            const startsAtTs = new Date(data.startsAt).getTime();
+            const endsAtTs = new Date(data.endsAt).getTime();
+            const tenMinsAfterStart = startsAtTs + 10 * 60000;
+            const nowTs = Date.now();
+            
+            if (nowTs > endsAtTs) {
+              setAttendMessage("Etkinlik/Oturum bitmiştir");
+            } else if (nowTs > tenMinsAfterStart) {
+              setAttendMessage("Artık Yoklama Yapamazsınız");
+            }
+          }
         })
         .catch(() => {});
     }
@@ -192,8 +205,16 @@ export default function AttendPage({ params }: { params: Promise<{ token: string
           )}
         </div>
 
-        {/* --- IDLE (Başlangıç veya Tarayıcı) --- */}
-        {status === "idle" && (
+        {attendMessage ? (
+          <div className="card" style={{ textAlign: "center", padding: "40px 20px" }}>
+            <h2 style={{ fontSize: 18, fontWeight: 600, color: "var(--danger)" }}>
+              {attendMessage}
+            </h2>
+          </div>
+        ) : (
+          <>
+            {/* --- IDLE (Başlangıç veya Tarayıcı) --- */}
+            {status === "idle" && (
           <div className="card" style={{ textAlign: "center" }}>
             <p style={{ color: "var(--text-secondary)", fontSize: 15, marginBottom: 20 }}>
               Katılım kaydınızı oluşturmak için telefon kameranızla etkinlik QR kodunu okutun veya cihazınızın kamerasını açın.
@@ -308,7 +329,9 @@ export default function AttendPage({ params }: { params: Promise<{ token: string
             <p style={{ color: "var(--text-secondary)", fontSize: 15 }}>
               {successMsg}
             </p>
-          </div>
+            </div>
+          )}
+          </>
         )}
 
       </div>

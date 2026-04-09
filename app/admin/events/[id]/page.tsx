@@ -30,6 +30,8 @@ interface Attendance {
   checkedInAt: string;
   isRegistered: boolean;
   isManual: boolean;
+  status: "present" | "absent";
+  manualReason: string | null;
 }
 
 interface QrData {
@@ -66,6 +68,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   const [manualName, setManualName] = useState("");
   const [manualEmail, setManualEmail] = useState("");
   const [manualPhone, setManualPhone] = useState("");
+  const [nowTs, setNowTs] = useState(Date.now());
 
   useEffect(() => {
     Promise.all([
@@ -104,6 +107,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
   useEffect(() => {
     if (tab !== "qr") return;
     const interval = setInterval(() => {
+      setNowTs(Date.now());
       setCountdown((prev) => {
         if (prev <= 1) { refreshQr(); return 60; }
         return prev - 1;
@@ -111,6 +115,43 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
     }, 1000);
     return () => clearInterval(interval);
   }, [tab, refreshQr]);
+
+  async function toggleStatus(participantId: string, currentStatus: "present" | "absent" | "none") {
+    const action = currentStatus === "present" ? "Yok" : "Var";
+    const reason = prompt(`Bu kişiyi neden '${action}' olarak işaretlemek istiyorsunuz? (Neden belirtmek zorunludur)`);
+    
+    if (!reason || !reason.trim()) {
+      alert("İşlemi tamamlamak için bir neden belirtmelisiniz.");
+      return;
+    }
+
+    const newStatus = action === "Var" ? "present" : "absent";
+
+    const res = await fetch(`/api/events/${id}/attendance`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        participantId,
+        status: newStatus,
+        reason: reason.trim()
+      }),
+    });
+
+    if (res.ok) {
+      const updatedRecord = await res.json();
+      setAttendances((prev) => {
+        const index = prev.findIndex(a => a.participantId === participantId);
+        if (index !== -1) {
+          const next = [...prev];
+          next[index] = updatedRecord;
+          return next;
+        }
+        return [...prev, updatedRecord];
+      });
+    } else {
+      alert("Güncelleme sırasında bir hata oluştu.");
+    }
+  }
 
   async function removeAttendance(attendanceId: string) {
     await fetch(`/api/events/${id}/attendance`, {
@@ -270,11 +311,22 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
 
   // Yoklama için: hangi participant'lar geldi?
   const attendedParticipantIds = new Set(
-    attendances.filter((a) => a.participantId).map((a) => a.participantId!)
+    attendances.filter((a) => a.participantId && a.status === "present").map((a) => a.participantId!)
   );
   const presentCount = participants.filter((p) => attendedParticipantIds.has(p.id)).length;
-  // Walk-in (listede olmayan ama gelen)
-  const walkIns = attendances.filter((a) => !a.isRegistered && !a.isManual);
+  // Walk-in (listede olmayan ama gelen ve durumu present olan)
+  const walkIns = attendances.filter((a) => !a.isRegistered && !a.isManual && a.status === "present");
+
+  let qrMessage = null;
+  const startsAtTs = new Date(event.startsAt).getTime();
+  const endsAtTs = new Date(event.endsAt).getTime();
+  const tenMinsAfterStart = startsAtTs + 10 * 60000;
+  
+  if (nowTs > endsAtTs) {
+    qrMessage = "Etkinlik/Oturum bitmiştir";
+  } else if (nowTs > tenMinsAfterStart) {
+    qrMessage = "Artık Yoklama Yapamazsınız";
+  }
 
   return (
     <div className="fade-in-up">
@@ -413,7 +465,11 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
               <p style={{ fontSize: 13, color: "var(--text-secondary)" }}>Her dakika otomatik yenilenir</p>
             </div>
 
-            {qrData ? (
+            {qrMessage ? (
+              <div style={{ textAlign: "center", padding: "40px 20px" }}>
+                <h3 style={{ fontSize: 18, fontWeight: 600, color: "var(--danger)" }}>{qrMessage}</h3>
+              </div>
+            ) : qrData ? (
               <>
                 <div className="qr-container" style={{ position: "relative" }}>
                   <div style={{
@@ -542,19 +598,41 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
                         <td style={{ color: "var(--text-secondary)", fontSize: 13 }}>{p.email || "-"}</td>
                         <td>
                           {att
-                            ? <span className="badge badge-success">Var</span>
-                            : <span className="badge badge-danger">Yok</span>
+                            ? (
+                              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                                <span className={att.status === "present" ? "badge badge-success" : "badge badge-danger"}>
+                                  {att.status === "present" ? "Var" : "Yok"}
+                                </span>
+                                {att.manualReason && (
+                                  <span style={{ fontSize: 11, color: "var(--text-muted)", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={att.manualReason}>
+                                    Neden: {att.manualReason}
+                                  </span>
+                                )}
+                              </div>
+                            )
+                            : <span className="badge badge-danger" style={{ opacity: 0.5 }}>Yok (Kayıt Yok)</span>
                           }
                         </td>
                         <td style={{ color: "var(--text-secondary)", fontSize: 13 }}>
-                          {att ? formatDate(att.checkedInAt) : "-"}
+                          {att && att.status === "present" ? formatDate(att.checkedInAt) : "-"}
                         </td>
                         <td>
-                          {att && (
-                            <button className="btn btn-danger btn-sm" onClick={() => removeAttendance(att.id)}>
-                              Kaldır
-                            </button>
-                          )}
+                          <div style={{ display: "flex", gap: 8 }}>
+                            {(!att || att.status === "absent") ? (
+                              <button className="btn btn-primary btn-sm" style={{ padding: "4px 8px", fontSize: 12 }} onClick={() => toggleStatus(p.id, att?.status || "none")}>
+                                Var Yap
+                              </button>
+                            ) : (
+                              <button className="btn btn-danger btn-sm" style={{ padding: "4px 8px", fontSize: 12 }} onClick={() => toggleStatus(p.id, "present")}>
+                                Yok Yap
+                              </button>
+                            )}
+                            {att && (
+                              <button className="btn btn-secondary btn-sm" style={{ padding: "4px 8px", fontSize: 12, opacity: 0.6 }} onClick={() => removeAttendance(att.id)}>
+                                Kaydı Sil
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
