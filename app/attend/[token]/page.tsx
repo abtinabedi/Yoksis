@@ -1,12 +1,14 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useEffect, useState, use } from "react";
 import { useSearchParams } from "next/navigation";
-import dynamic from "next/dynamic";
+import nextDynamic from "next/dynamic";
 import Image from "next/image";
 
 // html5-qrcode client-only
-const QrScanner = dynamic(() => import("@/components/attend/QrScanner"), {
+const QrScanner = nextDynamic(() => import("@/components/attend/QrScanner"), {
   ssr: false,
   loading: () => (
     <div style={{ textAlign: "center", padding: 40, color: "var(--text-muted)" }}>
