@@ -1,8 +1,6 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, use, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import nextDynamic from "next/dynamic";
 import Image from "next/image";
@@ -37,7 +35,7 @@ interface Session {
   role: string;
 }
 
-export default function AttendPage({ params }: { params: Promise<{ token: string }> }) {
+function AttendPageContent({ params }: { params: Promise<{ token: string }> }) {
   const { token: eventId } = use(params);
   const searchParams = useSearchParams();
   const qrToken = searchParams.get("t") || "";
@@ -338,5 +336,13 @@ export default function AttendPage({ params }: { params: Promise<{ token: string
 
       </div>
     </div>
+  );
+}
+
+export default function AttendPage({ params }: { params: Promise<{ token: string }> }) {
+  return (
+    <Suspense fallback={<div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: "100vh" }}>Yükleniyor...</div>}>
+      <AttendPageContent params={params} />
+    </Suspense>
   );
 }

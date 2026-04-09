@@ -39,7 +39,7 @@ function LoginContent() {
       if (!res.ok) {
         setError(data.error || "Giriş başarısız.");
       } else {
-        const defaultRoute = data.role === "admin" ? "/dashboard" : "/participant";
+        const defaultRoute = data.role === "admin" ? "/admin/dashboard" : "/participant";
         router.push(redirectUrl || defaultRoute);
       }
     } catch {
@@ -69,7 +69,7 @@ function LoginContent() {
       if (!res.ok) {
         setError(data.error || "Kayıt başarısız.");
       } else {
-        const defaultRoute = data.role === "admin" ? "/dashboard" : "/participant";
+        const defaultRoute = data.role === "admin" ? "/admin/dashboard" : "/participant";
         router.push(redirectUrl || defaultRoute);
       }
     } catch {
