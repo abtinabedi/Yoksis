@@ -48,7 +48,7 @@ export default function DashboardPage() {
           <h1 className="page-title">Dashboard</h1>
           <p className="page-subtitle">Tüm etkinlikleri yönetin</p>
         </div>
-        <Link href="/admin/events/new">
+        <Link href="/events/new">
           <button className="btn btn-primary">
             <span>+</span> Yeni Etkinlik
           </button>
@@ -82,7 +82,7 @@ export default function DashboardPage() {
           <p style={{ color: "var(--text-secondary)", marginBottom: 20 }}>
             Henüz etkinlik oluşturulmadı.
           </p>
-          <Link href="/admin/events/new">
+          <Link href="/events/new">
             <button className="btn btn-primary">İlk Etkinliği Oluştur</button>
           </Link>
         </div>
@@ -116,7 +116,7 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="mobile-btn-group" style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                  <Link href={`/admin/events/${event.id}`}>
+                  <Link href={`/events/${event.id}`}>
                     <button className="btn btn-secondary btn-sm mobile-100" title="QR Ekranı">QR Ekranı</button>
                   </Link>
                   <button

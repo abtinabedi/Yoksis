@@ -5,8 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 
 const navItems = [
-  { href: "/admin/dashboard", label: "Dashboard", icon: "" },
-  { href: "/admin/events/new", label: "Yeni Etkinlik", icon: "" },
+  { href: "/dashboard", label: "Dashboard", icon: "" },
+  { href: "/events/new", label: "Yeni Etkinlik", icon: "" },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -71,8 +71,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <span style={{ fontSize: 15, fontWeight: 700 }}>QR Yoklama</span>
           </div>
           <div className="mobile-nav-menu">
-            <Link href="/admin/dashboard" className="btn btn-secondary btn-sm" style={{ padding: "0 10px" }}>Dashboard</Link>
-            <Link href="/admin/events/new" className="btn btn-primary btn-sm" style={{ padding: "0 10px" }}>Yeni</Link>
+            <Link href="/dashboard" className="btn btn-secondary btn-sm" style={{ padding: "0 10px" }}>Dashboard</Link>
+            <Link href="/events/new" className="btn btn-primary btn-sm" style={{ padding: "0 10px" }}>Yeni</Link>
             <button onClick={handleLogout} className="btn btn-danger btn-sm" style={{ padding: "0 10px" }}>Çıkış</button>
           </div>
         </div>
