@@ -132,7 +132,7 @@ export default function ParticipantDashboard() {
               <div className="card" style={{ padding: 24 }}>
                 <h3 style={{ fontSize: 14, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 12 }}>Nasıl Yoklama Verilir?</h3>
                 <ul style={{ paddingLeft: 20, margin: 0, color: "var(--text-muted)", fontSize: 13, lineHeight: 1.6, display: "flex", flexDirection: "column", gap: 8 }}>
-                  <li>Eğitmeninizin paylaştığı <strong>QR Kodu</strong> telefonunuzun kamerasıyla okutun.</li>
+                  <li>Etkinliği oluşturan paylaştığı <strong>QR Kodu</strong> telefonunuzun kamerasıyla okutun.</li>
                   <li>Tarayıcıdaki <strong>Konum İznini</strong> onaylayın (etkinlik alanında olduğunuzu doğrulamak için gereklidir).</li>
                   <li>Oturumunuz zaten açık olduğu için <strong>tek tıkla</strong> yoklamanızı verebilirsiniz.</li>
                 </ul>

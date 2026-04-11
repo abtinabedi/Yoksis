@@ -371,7 +371,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
               Google Sheets / Forms
             </button>
             <label className={`btn btn-${participants.length > 0 ? "secondary" : "primary"} btn-sm`} style={{ cursor: "pointer" }}>
-              {csvLoading ? "Yükleniyor..." : participants.length > 0 ? "CSV Güncelle" : "CSV Yükle"}
+              {csvLoading ? "Yükleniyor..." : participants.length > 0 ? "CSV Yükle" : "CSV Yükle"}
               <input type="file" accept=".csv" style={{ display: "none" }} onChange={handleCsvImport} disabled={csvLoading} />
             </label>
           </div>
@@ -462,7 +462,7 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
           <div className="card" style={{ flex: 1, minWidth: 320, display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
             <div style={{ textAlign: "center" }}>
               <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 4 }}>QR Kod</h2>
-              <p style={{ fontSize: 13, color: "var(--text-secondary)" }}>Her dakika otomatik yenilenir</p>
+              <p style={{ fontSize: 13, color: "var(--text-secondary)" }}>Katılımınızı sağlamak için Aşağıdaki QR kod'u okutun</p>
             </div>
 
             {qrMessage ? (
@@ -523,8 +523,8 @@ export default function EventDetailPage({ params }: { params: Promise<{ id: stri
             <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Nasıl Çalışır?</h3>
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {[
-                { title: "Listeyi Yükle", desc: "Etkinlikten önce CSV ile katılımcı listesi yükleyin" },
-                { title: "QR Okut", desc: "Katılımcılar telefon kamerasıyla QR kodu okutup adlarını yazar" },
+                { title: "Listeyi Yükle", desc: "Etkinlikten önce (CSV , Google Sheets , Manuel)ile katılımcı listesini yükleyin" },
+                { title: "QR Okut", desc: "Katılımcılar telefon kamerasıyla QR kodu okutup ya da Katılım Link'i ile adlarını yazar (Önceden kayıdı yoksa)" },
                 { title: "Otomatik Eşleştirme", desc: "Sistem adı listede arar ve Var/Yok durumunu işaretler" },
                 { title: "Her dakika yenilenir", desc: "Güvenlik için QR kod 60 saniyede bir değişir" },
               ].map((item, i) => (

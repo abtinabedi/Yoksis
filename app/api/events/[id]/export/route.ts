@@ -25,8 +25,6 @@ export async function GET(
     "Katılım Tarihi": a.status === "present" ? new Date(a.checkedInAt).toLocaleString("tr-TR") : "-",
     "Manuel Sebep": a.manualReason || "-",
     "Kayıt Türü": a.isManual ? "Manuel" : a.isRegistered ? "Kayıtlı" : "Walk-in",
-    "Enlem": a.lat || "-",
-    "Boylam": a.lng || "-",
   }));
 
   const ws = XLSX.utils.json_to_sheet(data);
